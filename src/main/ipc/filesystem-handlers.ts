@@ -28,26 +28,22 @@ interface ValidationResult {
 
 // Get common user folders
 function getCommonFolders(): string[] {
-  // Use environment variable BASE_PATH if set, otherwise use home directory
-  const basePath = process.env.BASE_PATH || os.homedir();
+  // Hardcoded to backtrack-testing directory
+  const basePath = 'C:\\Users\\backtrack-testing';
 
-  const folders = [
-    path.join(basePath, 'Downloads'),
-    path.join(basePath, 'Documents'),
-    path.join(basePath, 'Desktop'),
-    path.join(basePath, 'Pictures'),
-    path.join(basePath, 'Music'),
-    path.join(basePath, 'Videos'),
-  ];
+  try {
+    // Get all subdirectories in backtrack-testing
+    const entries = fs.readdirSync(basePath, { withFileTypes: true });
+    const folders = entries
+      .filter(entry => entry.isDirectory())
+      .map(entry => path.join(basePath, entry.name));
 
-  // Filter to only existing folders
-  return folders.filter(folder => {
-    try {
-      return fs.existsSync(folder) && fs.statSync(folder).isDirectory();
-    } catch {
-      return false;
-    }
-  });
+    console.log(`[Filesystem] Found ${folders.length} folders in ${basePath}:`, folders);
+    return folders;
+  } catch (error) {
+    console.error(`[Filesystem] Error reading ${basePath}:`, error);
+    return [];
+  }
 }
 
 // Scan a folder and return file metadata
@@ -55,8 +51,15 @@ async function scanFolder(folderPath: string, recursive: boolean = false): Promi
   try {
     // Resolve home directory shortcut
     const resolvedPath = folderPath.startsWith('~')
-      ? path.join(os.homedir(), folderPath.slice(1))
+      ? path.join('C:\\Users\\backtrack-testing', folderPath.slice(1))
       : folderPath;
+
+    // Security: Only allow scanning within backtrack-testing directory
+    const basePath = 'C:\\Users\\backtrack-testing';
+    const normalizedPath = path.normalize(resolvedPath);
+    if (!normalizedPath.startsWith(basePath)) {
+      return { success: false, error: `Access denied: Can only scan folders within ${basePath}` };
+    }
 
     if (!fs.existsSync(resolvedPath)) {
       return { success: false, error: `Folder not found: ${folderPath}` };
