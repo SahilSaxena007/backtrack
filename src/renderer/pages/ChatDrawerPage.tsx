@@ -64,19 +64,36 @@ export function ChatDrawerPage() {
 
   return (
     <div className="w-full h-full flex items-end justify-start p-4">
-      {/* Chat Drawer Container */}
+      {/* Chat Drawer Container with slide-in animation */}
       <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-        className="w-full h-full bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden border border-gray-200"
+        initial={{ x: -400, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        exit={{ x: -400, opacity: 0 }}
+        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+        className="w-full h-full bg-white/90 backdrop-blur-lg rounded-2xl shadow-2xl flex flex-col overflow-hidden border-l-4 border-gray-200"
       >
-        {/* Header */}
-        <div className="h-14 border-b border-gray-200 flex items-center justify-between px-4 bg-gradient-to-r from-blue-50 to-purple-50 flex-shrink-0">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg"></div>
-            <h1 className="text-base font-semibold text-gray-900">Backtrack</h1>
+        {/* Header - 60px height as per spec */}
+        <div className="h-15 border-b border-gray-200 flex items-center justify-between px-4 bg-gray-50/80 flex-shrink-0">
+          <div className="flex items-center gap-3">
+            {/* Logo 24x24px */}
+            <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10z"
+                  stroke="white"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </div>
+            <h1 className="text-lg font-semibold text-gray-900">Backtrack</h1>
           </div>
           <button
             onClick={handleClose}
@@ -99,7 +116,7 @@ export function ChatDrawerPage() {
           </button>
         </div>
 
-        {/* Messages Area */}
+        {/* Scrollable Message Area with generous spacing (16px vertical) */}
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 custom-scrollbar">
           {messages.length === 0 ? (
             // Welcome message when no messages
@@ -147,8 +164,8 @@ export function ChatDrawerPage() {
                     <div
                       className={`max-w-[80%] rounded-2xl px-4 py-2 ${
                         message.role === 'user'
-                          ? 'bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-br-sm'
-                          : 'bg-gray-100 text-gray-900 rounded-bl-sm'
+                          ? 'bg-blue-500 text-white rounded-br-none'
+                          : 'bg-gray-100 text-gray-900 rounded-bl-none'
                       }`}
                     >
                       <p className="text-sm whitespace-pre-wrap break-words">
@@ -171,7 +188,7 @@ export function ChatDrawerPage() {
                 ))}
               </AnimatePresence>
 
-              {/* Typing Indicator */}
+              {/* Typing Indicator - Left-aligned like assistant messages */}
               {isLoading && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
@@ -179,7 +196,7 @@ export function ChatDrawerPage() {
                   exit={{ opacity: 0 }}
                   className="flex justify-start"
                 >
-                  <div className="bg-gray-100 rounded-2xl rounded-bl-sm px-4 py-3">
+                  <div className="bg-gray-100 rounded-2xl rounded-bl-none px-4 py-3 max-w-[80%]">
                     <div className="flex space-x-1">
                       <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
                       <div
@@ -201,26 +218,28 @@ export function ChatDrawerPage() {
           )}
         </div>
 
-        {/* Input Area */}
-        <div className="border-t border-gray-200 p-3 bg-gray-50 flex-shrink-0">
+        {/* Input Area - Fixed at bottom, 60px height initial */}
+        <div className="border-t border-gray-200 p-3 bg-gray-50/80 backdrop-blur-sm flex-shrink-0 min-h-[60px]">
           <div className="relative flex items-end gap-2">
+            {/* Multi-line textarea with auto-grow up to 5 lines (120px) */}
             <textarea
               ref={textareaRef}
               value={inputValue}
               onChange={handleInput}
               onKeyDown={handleKeyDown}
-              placeholder="Ask Backtrack anything..."
+              placeholder="Type your request..."
               rows={1}
               disabled={isLoading}
-              className="flex-1 resize-none rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+              className="flex-1 resize-none rounded-lg border border-gray-300 px-3 py-3 text-[14px] focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
               style={{ maxHeight: '120px' }}
             />
+            {/* Send Button - 36x36px, absolute positioning inside input */}
             <button
               onClick={handleSendMessage}
               disabled={!inputValue.trim() || isLoading}
-              className={`flex-shrink-0 w-9 h-9 rounded-lg flex items-center justify-center transition-colors ${
+              className={`flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center transition-all ${
                 inputValue.trim() && !isLoading
-                  ? 'bg-gradient-to-br from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white'
+                  ? 'bg-blue-500 hover:bg-blue-600 text-white shadow-md'
                   : 'bg-gray-300 text-gray-500 cursor-not-allowed'
               }`}
             >
