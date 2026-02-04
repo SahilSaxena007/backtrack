@@ -21,6 +21,23 @@ const api = {
 
   generateClarification: (intent: object): Promise<string> =>
     ipcRenderer.invoke('generate-clarification', intent),
+
+  // Drawer control
+  toggleDrawer: (): Promise<boolean> => ipcRenderer.invoke('toggle-drawer'),
+  openDrawer: (): Promise<boolean> => ipcRenderer.invoke('open-drawer'),
+  closeDrawer: (): Promise<boolean> => ipcRenderer.invoke('close-drawer'),
+  isDrawerOpen: (): Promise<boolean> => ipcRenderer.invoke('is-drawer-open'),
+
+  // Floating button mouse events control
+  setButtonMouseEvents: (ignore: boolean): void =>
+    ipcRenderer.send('set-button-mouse-events', ignore),
+
+  // Deploy/hide floating button
+  deployFloatingButton: (): Promise<{ success: boolean; message: string }> =>
+    ipcRenderer.invoke('deploy-floating-button'),
+  hideFloatingButton: (): Promise<{ success: boolean; message: string }> =>
+    ipcRenderer.invoke('hide-floating-button'),
+  isButtonDeployed: (): Promise<boolean> => ipcRenderer.invoke('is-button-deployed'),
 };
 
 // Type definitions for the API

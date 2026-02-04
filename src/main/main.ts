@@ -1,18 +1,20 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, screen } from 'electron';
 import * as path from 'path';
 import { registerFilesystemHandlers } from './ipc/filesystem-handlers';
 import { registerGeminiHandlers } from './ipc/gemini-handlers';
 
-let mainWindow: BrowserWindow | null = null;
+let mainControlWindow: BrowserWindow | null = null;
+let floatingButtonWindow: BrowserWindow | null = null;
+let chatDrawerWindow: BrowserWindow | null = null;
 
 const isDev = !app.isPackaged;
 
-function createWindow(): void {
-  mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
-    minWidth: 800,
-    minHeight: 600,
+function createMainControlWindow(): void {
+  mainControlWindow = new BrowserWindow({
+    width: 600,
+    height: 400,
+    minWidth: 500,
+    minHeight: 300,
     webPreferences: {
       contextIsolation: true,
       nodeIntegration: false,
@@ -20,24 +22,129 @@ function createWindow(): void {
       preload: path.join(__dirname, 'preload.js'),
     },
     show: false,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#ffffff',
+    title: 'Backtrack Control Panel',
   });
 
-  // Load the app
+  // Load the control panel page
   if (isDev) {
-    mainWindow.loadURL('http://localhost:5173');
-    mainWindow.webContents.openDevTools();
+    mainControlWindow.loadURL('http://localhost:5173/#/control-panel');
   } else {
-    mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'));
+    mainControlWindow.loadFile(path.join(__dirname, '../renderer/index.html'), {
+      hash: 'control-panel'
+    });
   }
 
-  // Show window when ready
-  mainWindow.once('ready-to-show', () => {
-    mainWindow?.show();
+  mainControlWindow.once('ready-to-show', () => {
+    mainControlWindow?.show();
   });
 
-  mainWindow.on('closed', () => {
-    mainWindow = null;
+  mainControlWindow.on('closed', () => {
+    mainControlWindow = null;
+    // Clean up floating button and drawer when control window closes
+    if (floatingButtonWindow) {
+      floatingButtonWindow.close();
+      floatingButtonWindow = null;
+    }
+    if (chatDrawerWindow) {
+      chatDrawerWindow.close();
+      chatDrawerWindow = null;
+    }
+  });
+}
+
+function createFloatingButtonWindow(): void {
+  const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workAreaSize;
+
+  floatingButtonWindow = new BrowserWindow({
+    width: 100,
+    height: 100,
+    x: screenWidth - 110, // 10px from right edge
+    y: screenHeight - 110, // 10px from bottom edge
+    frame: false,
+    transparent: true,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    resizable: false,
+    movable: false,
+    minimizable: false,
+    maximizable: false,
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+      preload: path.join(__dirname, 'preload.js'),
+    },
+    show: false,
+  });
+
+  // Make window click-through except for button
+  floatingButtonWindow.setIgnoreMouseEvents(true, { forward: true });
+
+  // Load the floating button page
+  if (isDev) {
+    floatingButtonWindow.loadURL('http://localhost:5173/#/floating-button');
+  } else {
+    floatingButtonWindow.loadFile(path.join(__dirname, '../renderer/index.html'), {
+      hash: 'floating-button'
+    });
+  }
+
+  floatingButtonWindow.once('ready-to-show', () => {
+    floatingButtonWindow?.show();
+  });
+
+  floatingButtonWindow.on('closed', () => {
+    floatingButtonWindow = null;
+  });
+}
+
+function createChatDrawerWindow(): void {
+  const { width: screenWidth, height: screenHeight } = screen.getPrimaryDisplay().workAreaSize;
+
+  // Chat drawer dimensions
+  const drawerWidth = 400;
+  const drawerHeight = 600;
+
+  // Position to the left of the floating button
+  // Floating button is at: screenWidth - 110 (x), screenHeight - 110 (y)
+  const buttonX = screenWidth - 110;
+  const buttonY = screenHeight - 110;
+
+  // Position drawer to the left of button, aligned to bottom
+  const drawerX = buttonX - drawerWidth - 20; // 20px gap from button
+  const drawerY = buttonY + 100 - drawerHeight; // Align bottom edge near button
+
+  chatDrawerWindow = new BrowserWindow({
+    width: drawerWidth,
+    height: drawerHeight,
+    x: drawerX,
+    y: drawerY,
+    frame: false,
+    transparent: true,
+    alwaysOnTop: true,
+    skipTaskbar: true,
+    resizable: false,
+    webPreferences: {
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+      preload: path.join(__dirname, 'preload.js'),
+    },
+    show: false,
+  });
+
+  // Load the chat drawer page
+  if (isDev) {
+    chatDrawerWindow.loadURL('http://localhost:5173/#/chat-drawer');
+  } else {
+    chatDrawerWindow.loadFile(path.join(__dirname, '../renderer/index.html'), {
+      hash: 'chat-drawer'
+    });
+  }
+
+  chatDrawerWindow.on('closed', () => {
+    chatDrawerWindow = null;
   });
 }
 
@@ -48,16 +155,89 @@ function setupIPC(): void {
 
   // Simple ping handler for testing IPC
   ipcMain.handle('ping', () => 'pong');
+
+  // Toggle chat drawer
+  ipcMain.handle('toggle-drawer', () => {
+    if (chatDrawerWindow) {
+      if (chatDrawerWindow.isVisible()) {
+        chatDrawerWindow.hide();
+      } else {
+        chatDrawerWindow.show();
+        chatDrawerWindow.focus();
+      }
+      return chatDrawerWindow.isVisible();
+    }
+    return false;
+  });
+
+  // Open chat drawer
+  ipcMain.handle('open-drawer', () => {
+    if (chatDrawerWindow) {
+      chatDrawerWindow.show();
+      chatDrawerWindow.focus();
+      return true;
+    }
+    return false;
+  });
+
+  // Close chat drawer
+  ipcMain.handle('close-drawer', () => {
+    if (chatDrawerWindow) {
+      chatDrawerWindow.hide();
+      return true;
+    }
+    return false;
+  });
+
+  // Check if drawer is open
+  ipcMain.handle('is-drawer-open', () => {
+    return chatDrawerWindow?.isVisible() || false;
+  });
+
+  // Enable/disable mouse events on floating button (for button hover area)
+  ipcMain.on('set-button-mouse-events', (_event, ignore: boolean) => {
+    if (floatingButtonWindow) {
+      floatingButtonWindow.setIgnoreMouseEvents(ignore, { forward: true });
+    }
+  });
+
+  // Deploy floating button
+  ipcMain.handle('deploy-floating-button', () => {
+    if (!floatingButtonWindow) {
+      createFloatingButtonWindow();
+      createChatDrawerWindow();
+      return { success: true, message: 'Floating button deployed' };
+    }
+    return { success: false, message: 'Floating button already deployed' };
+  });
+
+  // Hide floating button
+  ipcMain.handle('hide-floating-button', () => {
+    if (floatingButtonWindow) {
+      floatingButtonWindow.close();
+      floatingButtonWindow = null;
+    }
+    if (chatDrawerWindow) {
+      chatDrawerWindow.close();
+      chatDrawerWindow = null;
+    }
+    return { success: true, message: 'Floating button hidden' };
+  });
+
+  // Check if floating button is deployed
+  ipcMain.handle('is-button-deployed', () => {
+    return floatingButtonWindow !== null;
+  });
 }
 
 // App lifecycle
 app.whenReady().then(() => {
   setupIPC();
-  createWindow();
+  createMainControlWindow();
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
+    if (!mainControlWindow) {
+      createMainControlWindow();
     }
   });
 });
