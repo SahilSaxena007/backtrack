@@ -1,97 +1,153 @@
-# Backtrack - AI-Powered File Organization Desktop App
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+## CRITICAL RULES
+
+**DO NOT commit changes until explicitly instructed to do so by the user.** Wait for user confirmation before running any git commands.
+
+**DO NOT use `.claude/progress.md` as a reference file.** Only update it to mark completed tasks. Use CLAUDE.md and implementation plans for context.
+
+**Update `.claude/implementation-plan-F1.md` checklist tasks** after completing each task implementation. Mark all subtasks as `[x]` and note what was accomplished.
 
 ## Project Overview
-Backtrack is a desktop application for the Gemini 3 Global Hackathon that provides a transactional execution layer for AI-powered file organization. Users interact through natural language, see visual previews before changes, and can undo any operation with one click.
 
-## Timeline
-6 days total (hackathon deadline: [your date])
-- Days 1-2: F1 - Natural Language Input ← WE ARE HERE
-- Day 3: F2 - AI-Powered Planning (Gemini 3 showcase)
-- Day 4: F3 - Visual Preview + F5 - Execution
-- Day 5: F6 - Undo + Polish
-- Day 6: Demo video + Submission
+Backtrack is an Electron desktop application for AI-powered file organization, built for the Gemini 3 Global Hackathon. Users deploy a system-wide floating button overlay, interact through natural language chat, and organize files with AI assistance (Gemini 3 API) via MCP Filesystem Server.
 
-## Tech Stack
-- **Desktop:** Electron 28+
-- **Frontend:** React 18 + TypeScript + Tailwind CSS
-- **State:** Zustand
-- **AI:** Gemini 3 API (thinking levels, thought signatures, 1M context)
-- **File Ops:** MCP Filesystem Server
-- **Checkpoints:** Git (simple-git library)
-- **Animations:** Framer Motion
+## Key Architecture Decisions
 
-## Current Status
-Day 1 complete - Electron + MCP Filesystem integrated and tested. Ready for Day 2 (Chat UI).
+### Multi-Window System (Wisprflow-style)
+The app uses **three separate Electron windows**, not a traditional single-window app:
 
-## Architecture
-```
-User Input → Chat Interface (React)
-    ↓
-Gemini 3 API (thinking_level: low for speed)
-    ↓
-MCP Filesystem (real file operations)
-    ↓
-Git Checkpoints (undo capability)
-```
+1. **Main Control Panel** (`MainControlPage`) - 600x400px
+   - Entry point when app launches
+   - Contains "Deploy Backtrack Button" to show/hide floating button
+   - Loads at `http://localhost:5173/#/control-panel`
 
-## Key Gemini 3 Features We're Showcasing
-1. **Thinking Levels:** Low (800ms planning) vs High (3s verification)
-2. **Thought Signatures:** Reasoning continuity across 3 API calls
-3. **1M Context Window:** Entire file system + history in one call
-4. **Structured Outputs:** Guaranteed valid JSON action graphs
+2. **Floating Button Overlay** (`FloatingButtonPage`) - 100x100px
+   - System-wide overlay (always-on-top, frameless, transparent)
+   - Positioned at `screenWidth-110, screenHeight-110`
+   - Click-through enabled except on button hover (`setIgnoreMouseEvents`)
+   - Loads at `http://localhost:5173/#/floating-button`
 
-## Implementation Plan Location
-See `.claude/implementation-plan-F1.md` for detailed Day 1-2 tasks.
+3. **Chat Drawer** (`ChatDrawerPage`) - 400x600px
+   - Floating window positioned **20px left of floating button**
+   - Semi-transparent (`bg-white/90`) with backdrop blur
+   - Slides in from left with Framer Motion
+   - Loads at `http://localhost:5173/#/chat-drawer`
 
-## Development Workflow
-1. Read current task from implementation plan
-2. Ask Claude Code to implement that specific task
-3. Test the implementation
-4. Move to next task
-5. Track progress in checklist below
+**Critical**: Windows are created/destroyed dynamically via IPC handlers (`deploy-floating-button`, `hide-floating-button`). When control panel closes, all windows close.
 
-## Day 1 Checklist
-- [x] Initialize Electron + React + TypeScript project
-- [x] Install all dependencies
-- [x] Configure Electron security (contextIsolation, etc.)
-- [x] Set up MCP Filesystem Server integration
-- [x] Create IPC handlers for file operations
-- [x] Test folder scanning works (verified: backtrack-testing directory)
-- [x] Verify dev environment runs (`npm run dev`)
+### IPC Communication Pattern
+All renderer↔main communication uses **typed IPC via preload script** (`src/main/preload.ts`):
+- Renderer calls `window.api.methodName()`
+- Main process handles via `ipcMain.handle('method-name', ...)`
+- Security: `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`
 
-## Day 2 Checklist
-- [ ] Build floating button component
-- [ ] Build chat drawer with animations
-- [ ] Implement message state management (Zustand)
-- [ ] Integrate Gemini 3 API for intent parsing
-- [ ] Implement autocomplete for folder paths
-- [ ] Test complete conversation flow
-- [ ] Ready to hand off to F2
+### State Management
+Two Zustand stores in renderer process:
+- **`uiStore.ts`**: Drawer visibility, loading state, new message flags
+- **`conversationStore.ts`**: Message history (user/assistant), conversation ID
 
-## Important Notes
-- MCP Filesystem does the file operations (don't build from scratch)
-- Git handles checkpoints (don't build custom system)
-- Focus on Gemini 3 integration - that's what wins the hackathon
-- Sonnet for 90% of work, Opus only when stuck
+**Important**: Button polls drawer state every 500ms to stay synced (see `FloatingButton.tsx`).
 
-## Commands
+### MCP Filesystem Integration
+File operations use **MCP (Model Context Protocol)** server, not Node.js `fs`:
+- Client spawned via stdio transport: `npx @modelcontextprotocol/server-filesystem`
+- Allowed paths configured at startup (e.g., `C:\\Users\\backtrack-testing`)
+- All file ops route through `MCPFilesystemClient` singleton
+- See `src/main/services/mcp-client.ts` for implementation
+
+## Development Commands
+
 ```bash
-# Development
-npm run dev          # Start dev server (Vite + Electron)
-npm run build        # Build for production
-npm run lint         # Check TypeScript errors
+# Start development (Vite + Electron)
+npm run dev
 
-# Testing
-npm test            # Run tests (once added)
+# Build main process only (after editing main.ts)
+npm run build:main
+
+# Type check without building
+npm run lint
+
+# Build for production
+npm run build
 ```
 
-## API Keys Needed
-- GEMINI_API_KEY (from Google AI Studio)
-- MCP allows folders: ~/Downloads, ~/Documents
+**Important**: After editing files in `src/main/`, you must run `npm run build:main` before changes take effect. The dev server auto-compiles renderer but not main process.
 
-## Security Configuration
-All Electron windows must have:
-- contextIsolation: true
-- nodeIntegration: false
-- sandbox: true
-- preload script for safe IPC
+## Routing System
+
+Uses **hash-based routing** (not React Router):
+```typescript
+// App.tsx determines which page to render based on window.location.hash
+#/control-panel → MainControlPage
+#/floating-button → FloatingButtonPage
+#/chat-drawer → ChatDrawerPage
+```
+
+Each Electron window loads a different hash. Change routing logic in `src/renderer/App.tsx`.
+
+## Gemini 3 API Integration (Pending)
+
+Placeholder response currently in `ChatDrawerPage.tsx:44-49`. Replace with:
+- API client in `src/main/services/`
+- IPC handler for `parse-intent`
+- Use `thinking_level: 'low'` for speed
+- Return structured JSON via `responseMimeType: 'application/json'`
+
+## File Organization Constraints
+
+**Commit messages**: Must be 3-5 words maximum (enforced by project rules).
+
+**Window creation**: All windows must have security config:
+```typescript
+webPreferences: {
+  contextIsolation: true,
+  nodeIntegration: false,
+  sandbox: true,
+  preload: path.join(__dirname, 'preload.js')
+}
+```
+
+**MCP allowed paths**: Only add paths to `allowedPaths` array in `filesystem-handlers.ts`. Never bypass MCP for file operations.
+
+## Common Development Gotchas
+
+1. **Floating button appears cut off**: Window must be 100x100px minimum to show 64px button with shadow
+2. **Drawer doesn't update when closed**: Button polls state every 500ms, not event-driven
+3. **Port 5173 already in use**: Kill lingering Vite process: `taskkill /F /PID <pid>`
+4. **Changes to main.ts not reflected**: Must run `npm run build:main` after edits
+5. **Click-through not working**: Check `setIgnoreMouseEvents(true, { forward: true })` in `createFloatingButtonWindow()`
+
+## Project Structure Context
+
+```
+src/
+├── main/               # Electron main process (Node.js)
+│   ├── main.ts        # Window creation & lifecycle
+│   ├── preload.ts     # IPC bridge (contextBridge)
+│   ├── ipc/           # IPC handlers (filesystem, gemini)
+│   └── services/      # MCP client, future Gemini client
+├── renderer/          # React app (browser context)
+│   ├── App.tsx        # Hash-based router
+│   ├── components/    # FloatingButton
+│   ├── pages/         # MainControlPage, FloatingButtonPage, ChatDrawerPage
+│   └── store/         # Zustand state (uiStore, conversationStore)
+└── shared/            # Types shared between main & renderer
+```
+
+## Next Steps
+
+Current status: **Tasks 3-6 complete** (Floating Button, Chat Drawer UI, Message State Management).
+
+**Completed:**
+- ✅ Task 3: Floating button with system-wide overlay and animations
+- ✅ Task 4: Chat drawer with message bubbles, typing indicator, and input area
+- ✅ Task 5: Input area (implemented as part of Task 4)
+- ✅ Task 6: Conversation state management (Zustand conversationStore)
+
+**Next:**
+- Task 7: Gemini 3 API integration for intent parsing
+- Task 8: Autocomplete for folder paths
+- Task 9: End-to-end conversation flow

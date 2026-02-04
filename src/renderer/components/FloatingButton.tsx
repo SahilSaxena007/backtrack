@@ -56,7 +56,7 @@ export function FloatingButton() {
       className={`
         fixed bottom-6 right-6
         w-16 h-16
-        rounded-full
+        ${drawerOpen ? 'rounded-l-2xl rounded-r-2xl' : 'rounded-full'}
         shadow-2xl
         flex items-center justify-center
         transition-all duration-300 ease-in-out
@@ -64,7 +64,7 @@ export function FloatingButton() {
         z-50
         ${
           drawerOpen
-            ? 'bg-gray-800 hover:bg-gray-700'
+            ? 'bg-white border border-l-0 border-gray-200'
             : 'bg-gradient-to-br from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700'
         }
       `}
@@ -110,7 +110,7 @@ export function FloatingButton() {
         transition={{ duration: 0.3, ease: 'easeInOut' }}
       >
         {drawerOpen ? (
-          <X className="w-6 h-6 text-white" strokeWidth={2.5} />
+          <X className={`w-6 h-6 ${drawerOpen ? 'text-gray-700' : 'text-white'}`} strokeWidth={2.5} />
         ) : (
           <MessageCircle className="w-6 h-6 text-white" strokeWidth={2.5} />
         )}

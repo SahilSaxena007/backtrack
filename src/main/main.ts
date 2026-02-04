@@ -105,15 +105,15 @@ function createChatDrawerWindow(): void {
   // Chat drawer dimensions
   const drawerWidth = 400;
   const drawerHeight = 600;
+  const buttonSize = 100;
 
-  // Position to the left of the floating button
-  // Floating button is at: screenWidth - 110 (x), screenHeight - 110 (y)
+  // Floating button position
   const buttonX = screenWidth - 110;
   const buttonY = screenHeight - 110;
 
-  // Position drawer to the left of button, aligned to bottom
-  const drawerX = buttonX - drawerWidth - 20; // 20px gap from button
-  const drawerY = buttonY + 100 - drawerHeight; // Align bottom edge near button
+  // Position drawer to the left of button, with bottom edges aligned
+  const drawerX = buttonX - drawerWidth - 10; // 10px gap from button
+  const drawerY = buttonY - (drawerHeight - buttonSize); // Align bottom edges
 
   chatDrawerWindow = new BrowserWindow({
     width: drawerWidth,

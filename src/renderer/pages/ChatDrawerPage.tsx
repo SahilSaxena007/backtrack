@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send } from 'lucide-react';
+import { Send, Settings } from 'lucide-react';
 import { useConversationStore } from '../store/conversationStore';
 
 export function ChatDrawerPage() {
@@ -63,14 +63,14 @@ export function ChatDrawerPage() {
   };
 
   return (
-    <div className="w-full h-full flex items-end justify-start p-4">
-      {/* Chat Drawer Container with slide-in animation */}
+    <div className="w-full h-full flex items-end justify-end">
+      {/* Chat Drawer Container - slides in from right, aligns with button */}
       <motion.div
-        initial={{ x: -400, opacity: 0 }}
+        initial={{ x: 420, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
-        exit={{ x: -400, opacity: 0 }}
+        exit={{ x: 420, opacity: 0 }}
         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className="w-full h-full bg-white/90 backdrop-blur-lg rounded-2xl shadow-2xl flex flex-col overflow-hidden border-l-4 border-gray-200"
+        className="w-full h-full bg-white/95 backdrop-blur-lg rounded-2xl rounded-tr-none rounded-br-none shadow-2xl flex flex-col overflow-hidden border-l border-gray-200 border-r-0"
       >
         {/* Header - 60px height as per spec */}
         <div className="h-15 border-b border-gray-200 flex items-center justify-between px-4 bg-gray-50/80 flex-shrink-0">
@@ -95,10 +95,18 @@ export function ChatDrawerPage() {
             </div>
             <h1 className="text-lg font-semibold text-gray-900">Backtrack</h1>
           </div>
-          <button
-            onClick={handleClose}
-            className="w-7 h-7 rounded-lg hover:bg-gray-200 flex items-center justify-center transition-colors"
-          >
+          <div className="flex items-center gap-2">
+            {/* Optional Settings button for future preferences */}
+            <button
+              className="w-7 h-7 rounded-lg hover:bg-gray-200 flex items-center justify-center transition-colors"
+              title="Settings (coming soon)"
+            >
+              <Settings className="w-4 h-4 text-gray-600" />
+            </button>
+            <button
+              onClick={handleClose}
+              className="w-7 h-7 rounded-lg hover:bg-gray-200 flex items-center justify-center transition-colors"
+            >
             <svg
               width="14"
               height="14"
@@ -114,6 +122,7 @@ export function ChatDrawerPage() {
               />
             </svg>
           </button>
+        </div>
         </div>
 
         {/* Scrollable Message Area with generous spacing (16px vertical) */}
