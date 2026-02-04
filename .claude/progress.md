@@ -24,12 +24,24 @@
 - [x] Keyboard shortcut (Cmd/Ctrl+K) implemented
 - [x] Removed automatic DevTools opening
 
-### Task 4: Chat Drawer Interface - Next
-- [ ] Build message bubbles (user vs assistant)
-- [ ] Create scrollable message area
-- [ ] Implement input area with send button
-- [ ] Add typing indicator
-- [ ] Connect to message store
+### Task 4: Chat Drawer Interface ✅ COMPLETE
+- [x] Created conversationStore (Zustand) for messages
+- [x] Built message bubbles (user: blue gradient, assistant: gray)
+- [x] Created scrollable message area with custom scrollbar
+- [x] Implemented auto-scroll to bottom on new messages
+- [x] Added typing indicator with animated dots
+- [x] Built input area with auto-growing textarea
+- [x] Added send button with state management
+- [x] Implemented keyboard shortcuts (Enter/Shift+Enter/Esc)
+- [x] Added timestamps to messages
+- [x] Framer Motion animations for message appearance
+- [x] Welcome screen when no messages
+
+### Task 7: Gemini Integration - Next
+- [ ] Integrate Gemini 3 API for intent parsing
+- [ ] Replace placeholder response with real AI
+- [ ] Implement thinking levels
+- [ ] Add thought signatures
 
 ## Architecture Decisions
 

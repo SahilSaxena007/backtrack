@@ -312,15 +312,57 @@ F2 Planning (when ready)
   - [x] Keyboard shortcut: Cmd/Ctrl + K
   - [x] State polling every 500ms for sync
 
-#### 4. Build Chat Drawer Component - IN PROGRESS
-
-**NOTE:** Basic structure created as compact floating drawer (400x600px) positioned left of button.
+#### 4. Build Chat Drawer Component ✅ COMPLETE
 
 - [x] **Create Compact Floating Drawer**
   - [x] Created `src/renderer/pages/ChatDrawerPage.tsx`
   - [x] Fixed size: 400px × 600px (not full height)
   - [x] Position: Left of floating button (relative positioning)
   - [x] Transparent window with rounded container (rounded-2xl)
+  - [x] Framer Motion animations (fade in, scale, spring)
+
+- [x] **Implement Drawer Header**
+  - [x] Header section (14px height)
+  - [x] Backtrack logo + title
+  - [x] Close button with hover effect
+  - [x] Gradient background (blue to purple)
+
+- [x] **Create Scrollable Message Area**
+  - [x] Flex-1 container with overflow-y-auto
+  - [x] Auto-scroll to bottom on new messages
+  - [x] Custom scrollbar styling (6px, thin, rounded)
+  - [x] Welcome message when no messages
+
+- [x] **Design Message Bubbles**
+  - [x] User messages: Right-aligned, blue gradient, rounded-br-sm
+  - [x] Assistant messages: Left-aligned, gray background, rounded-bl-sm
+  - [x] Max width 80%, proper padding
+  - [x] Timestamps below each message
+  - [x] Framer Motion animations on appearance
+
+- [x] **Implement Typing Indicator**
+  - [x] Three animated bouncing dots
+  - [x] Left-aligned like assistant messages
+  - [x] Shows during loading state
+  - [x] Animated appearance/disappearance
+
+- [x] **Create Multi-Line Text Input**
+  - [x] Textarea with auto-grow (up to 5 lines)
+  - [x] Placeholder text
+  - [x] Border styling with focus state
+  - [x] Disabled during loading
+
+- [x] **Add Send Button**
+  - [x] Send icon from lucide-react
+  - [x] Enabled when text present
+  - [x] Disabled state styling
+  - [x] Gradient background when active
+
+- [x] **Implement Keyboard Shortcuts**
+  - [x] Enter to send message
+  - [x] Shift+Enter for newline
+  - [x] Escape to close drawer
+  - [x] Helper text showing shortcuts
   - [ ] Implement slide-in animation using Framer Motion:
     ```typescript
     <motion.div
