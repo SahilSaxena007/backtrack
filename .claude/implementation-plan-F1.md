@@ -115,15 +115,15 @@ F2 Planning (when ready)
 
 #### 1. Initialize Electron Project
 
-- [ ] **Create Electron + React + TypeScript Project**
-  - [ ] Initialize new project directory: `backtrack-desktop/`
-  - [ ] Install Electron 28+ with `npm install --save-dev electron@latest`
-  - [ ] Install React 18 with `npm install react@18 react-dom@18`
-  - [ ] Install TypeScript with `npm install --save-dev typescript @types/react @types/react-dom`
-  - [ ] Install Vite for fast development: `npm install --save-dev vite @vitejs/plugin-react`
-  - [ ] Create `tsconfig.json` with strict mode enabled
-  - [ ] Create `vite.config.ts` for renderer process bundling
-  - [ ] Set up project structure:
+- [x] **Create Electron + React + TypeScript Project**
+  - [x] Initialize new project directory: `backtrack-desktop/`
+  - [x] Install Electron 28+ with `npm install --save-dev electron@latest`
+  - [x] Install React 18 with `npm install react@18 react-dom@18`
+  - [x] Install TypeScript with `npm install --save-dev typescript @types/react @types/react-dom`
+  - [x] Install Vite for fast development: `npm install --save-dev vite @vitejs/plugin-react`
+  - [x] Create `tsconfig.json` with strict mode enabled
+  - [x] Create `vite.config.ts` for renderer process bundling
+  - [x] Set up project structure:
     ```
     backtrack-desktop/
     ├── src/
@@ -141,8 +141,8 @@ F2 Planning (when ready)
     └── electron-builder.yml
     ```
 
-- [ ] **Configure Electron Security Best Practices**
-  - [ ] Create `src/main/main.ts` with the following security settings:
+- [x] **Configure Electron Security Best Practices**
+  - [x] Create `src/main/main.ts` with the following security settings:
     ```typescript
     const mainWindow = new BrowserWindow({
       width: 1200,
@@ -155,7 +155,7 @@ F2 Planning (when ready)
       }
     });
     ```
-  - [ ] Create `src/main/preload.ts` to expose safe APIs to renderer:
+  - [x] Create `src/main/preload.ts` to expose safe APIs to renderer:
     ```typescript
     contextBridge.exposeInMainWorld('api', {
       sendMessage: (message: string) => ipcRenderer.invoke('send-message', message),
@@ -164,11 +164,11 @@ F2 Planning (when ready)
       // More APIs as needed
     });
     ```
-  - [ ] Set Content Security Policy in main window HTML
-  - [ ] Disable remote module completely
+  - [x] Set Content Security Policy in main window HTML
+  - [x] Disable remote module completely
 
-- [ ] **Set Up Development Environment**
-  - [ ] Add npm scripts to `package.json`:
+- [x] **Set Up Development Environment**
+  - [x] Add npm scripts to `package.json`:
     ```json
     {
       "scripts": {
@@ -179,16 +179,16 @@ F2 Planning (when ready)
       }
     }
     ```
-  - [ ] Install `concurrently` and `wait-on` for parallel dev processes
-  - [ ] Configure hot reload for renderer process (Vite handles this)
-  - [ ] Test dev environment: run `npm run dev` and verify Electron window opens
+  - [x] Install `concurrently` and `wait-on` for parallel dev processes
+  - [x] Configure hot reload for renderer process (Vite handles this)
+  - [x] Test dev environment: run `npm run dev` and verify Electron window opens
 
 #### 2. Integrate MCP Filesystem Server
 
-- [ ] **Install and Configure MCP SDK**
-  - [ ] Install MCP SDK: `npm install @modelcontextprotocol/sdk`
-  - [ ] Create `src/main/services/mcp-client.ts`
-  - [ ] Initialize MCP client that connects to filesystem server:
+- [x] **Install and Configure MCP SDK**
+  - [x] Install MCP SDK: `npm install @modelcontextprotocol/sdk`
+  - [x] Create `src/main/services/mcp-client.ts`
+  - [x] Initialize MCP client that connects to filesystem server:
     ```typescript
     import { Client } from '@modelcontextprotocol/sdk/client/index.js';
     import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
@@ -215,11 +215,11 @@ F2 Planning (when ready)
       }
     }
     ```
-  - [ ] Add error handling for MCP connection failures
-  - [ ] Add reconnection logic if MCP server disconnects
+  - [x] Add error handling for MCP connection failures
+  - [x] Add reconnection logic if MCP server disconnects
 
-- [ ] **Create MCP Filesystem Operations**
-  - [ ] Implement `readDirectory(path: string, recursive: boolean)` method:
+- [x] **Create MCP Filesystem Operations**
+  - [x] Implement `readDirectory(path: string, recursive: boolean)` method:
     ```typescript
     async readDirectory(path: string, recursive = false) {
       const result = await this.client.callTool('read_directory', {
@@ -229,11 +229,11 @@ F2 Planning (when ready)
       return this.parseDirectoryResult(result);
     }
     ```
-  - [ ] Implement `moveFile(source: string, destination: string)` method
-  - [ ] Implement `createFolder(path: string)` method
-  - [ ] Implement `deleteFile(path: string)` method (with backup to temp location)
-  - [ ] Implement `copyFile(source: string, destination: string)` method
-  - [ ] Add TypeScript types for all MCP responses:
+  - [x] Implement `moveFile(source: string, destination: string)` method
+  - [x] Implement `createFolder(path: string)` method
+  - [x] Implement `deleteFile(path: string)` method (with backup to temp location)
+  - [x] Implement `copyFile(source: string, destination: string)` method
+  - [x] Add TypeScript types for all MCP responses:
     ```typescript
     interface FileMetadata {
       name: string;
@@ -247,9 +247,9 @@ F2 Planning (when ready)
     }
     ```
 
-- [ ] **Set Up IPC Handlers for MCP Operations**
-  - [ ] Create `src/main/ipc/filesystem-handlers.ts`
-  - [ ] Register IPC handler for `scan-folder`:
+- [x] **Set Up IPC Handlers for MCP Operations**
+  - [x] Create `src/main/ipc/filesystem-handlers.ts`
+  - [x] Register IPC handler for `scan-folder`:
     ```typescript
     ipcMain.handle('scan-folder', async (event, folderPath: string) => {
       try {
@@ -260,18 +260,18 @@ F2 Planning (when ready)
       }
     });
     ```
-  - [ ] Register IPC handler for `get-folder-list` (for autocomplete)
-  - [ ] Register IPC handler for `validate-folder-path` (check if path exists)
-  - [ ] Add request/response logging for debugging
-  - [ ] Implement timeout handling (5 seconds for folder scans)
+  - [x] Register IPC handler for `get-folder-list` (for autocomplete)
+  - [x] Register IPC handler for `validate-folder-path` (check if path exists)
+  - [x] Add request/response logging for debugging
+  - [x] Implement timeout handling (5 seconds for folder scans)
 
-- [ ] **Test MCP Integration End-to-End**
-  - [ ] Create test folder `~/Downloads/BacktrackTest/` with 10 sample files
-  - [ ] Test scanning the folder via IPC from renderer process
-  - [ ] Verify file metadata is correctly returned (name, size, type, dates)
-  - [ ] Test error handling: scan non-existent folder (should return error)
-  - [ ] Test permission handling: scan system folder (should fail gracefully)
-  - [ ] Log all MCP operations to console for verification
+- [x] **Test MCP Integration End-to-End**
+  - [x] Create test folder `~/Downloads/BacktrackTest/` with 10 sample files
+  - [x] Test scanning the folder via IPC from renderer process
+  - [x] Verify file metadata is correctly returned (name, size, type, dates)
+  - [x] Test error handling: scan non-existent folder (should return error)
+  - [x] Test permission handling: scan system folder (should fail gracefully)
+  - [x] Log all MCP operations to console for verification
 
 ---
 

@@ -1,7 +1,7 @@
 import { IpcMain } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as os from 'os';
+import { getMCPClient } from '../services/mcp-client';
 
 interface FileMetadata {
   name: string;
@@ -26,39 +26,71 @@ interface ValidationResult {
   error?: string;
 }
 
-// Get common user folders
-function getCommonFolders(): string[] {
-  // Hardcoded to backtrack-testing directory
-  const basePath = 'C:\\Users\\backtrack-testing';
+const BASE_PATH = 'C:\\Users\\backtrack-testing';
+let useMCP = false; // Flag to switch between MCP and fs
 
+/**
+ * Get all subdirectories in backtrack-testing
+ */
+function getCommonFolders(): string[] {
   try {
     // Get all subdirectories in backtrack-testing
-    const entries = fs.readdirSync(basePath, { withFileTypes: true });
+    const entries = fs.readdirSync(BASE_PATH, { withFileTypes: true });
     const folders = entries
       .filter(entry => entry.isDirectory())
-      .map(entry => path.join(basePath, entry.name));
+      .map(entry => path.join(BASE_PATH, entry.name));
 
-    console.log(`[Filesystem] Found ${folders.length} folders in ${basePath}:`, folders);
+    console.log(`[Filesystem] Found ${folders.length} folders in ${BASE_PATH}:`, folders);
     return folders;
   } catch (error) {
-    console.error(`[Filesystem] Error reading ${basePath}:`, error);
+    console.error(`[Filesystem] Error reading ${BASE_PATH}:`, error);
     return [];
   }
 }
 
-// Scan a folder and return file metadata
-async function scanFolder(folderPath: string, recursive: boolean = false): Promise<ScanResult> {
+/**
+ * Scan folder using MCP
+ */
+async function scanFolderMCP(folderPath: string, recursive: boolean = false): Promise<ScanResult> {
+  try {
+    console.log(`[MCP Filesystem] Scanning: ${folderPath}`);
+
+    // Security check
+    const normalizedPath = path.normalize(folderPath);
+    if (!normalizedPath.startsWith(BASE_PATH)) {
+      return { success: false, error: `Access denied: Can only scan folders within ${BASE_PATH}` };
+    }
+
+    // Get MCP client
+    const mcpClient = await getMCPClient([BASE_PATH]);
+
+    // Read directory using MCP
+    const files = await mcpClient.readDirectory(folderPath, recursive);
+
+    console.log(`[MCP Filesystem] Scanned ${files.length} files in ${folderPath}`);
+    return { success: true, files };
+
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    console.error(`[MCP Filesystem] Error scanning folder: ${message}`);
+    return { success: false, error: message };
+  }
+}
+
+/**
+ * Scan folder using Node.js fs (fallback)
+ */
+async function scanFolderFS(folderPath: string, recursive: boolean = false): Promise<ScanResult> {
   try {
     // Resolve home directory shortcut
     const resolvedPath = folderPath.startsWith('~')
-      ? path.join('C:\\Users\\backtrack-testing', folderPath.slice(1))
+      ? path.join(BASE_PATH, folderPath.slice(1))
       : folderPath;
 
     // Security: Only allow scanning within backtrack-testing directory
-    const basePath = 'C:\\Users\\backtrack-testing';
     const normalizedPath = path.normalize(resolvedPath);
-    if (!normalizedPath.startsWith(basePath)) {
-      return { success: false, error: `Access denied: Can only scan folders within ${basePath}` };
+    if (!normalizedPath.startsWith(BASE_PATH)) {
+      return { success: false, error: `Access denied: Can only scan folders within ${BASE_PATH}` };
     }
 
     if (!fs.existsSync(resolvedPath)) {
@@ -114,11 +146,13 @@ async function scanFolder(folderPath: string, recursive: boolean = false): Promi
   }
 }
 
-// Validate if a folder path exists
+/**
+ * Validate if a folder path exists
+ */
 async function validateFolderPath(folderPath: string): Promise<ValidationResult> {
   try {
     const resolvedPath = folderPath.startsWith('~')
-      ? path.join(os.homedir(), folderPath.slice(1))
+      ? path.join(BASE_PATH, folderPath.slice(1))
       : folderPath;
 
     if (!fs.existsSync(resolvedPath)) {
@@ -137,12 +171,31 @@ async function validateFolderPath(folderPath: string): Promise<ValidationResult>
   }
 }
 
-// Register all filesystem IPC handlers
+/**
+ * Register all filesystem IPC handlers
+ */
 export function registerFilesystemHandlers(ipcMain: IpcMain): void {
+  // Initialize MCP client on startup
+  (async () => {
+    try {
+      await getMCPClient([BASE_PATH]);
+      useMCP = true;
+      console.log('[Filesystem] MCP client initialized, using MCP for file operations');
+    } catch (error) {
+      console.warn('[Filesystem] MCP initialization failed, falling back to Node.js fs:', error);
+      useMCP = false;
+    }
+  })();
+
   // Scan folder handler
   ipcMain.handle('scan-folder', async (_event, folderPath: string, recursive?: boolean) => {
-    console.log(`[IPC] scan-folder: ${folderPath}, recursive: ${recursive}`);
-    return scanFolder(folderPath, recursive ?? false);
+    console.log(`[IPC] scan-folder: ${folderPath}, recursive: ${recursive}, using MCP: ${useMCP}`);
+
+    if (useMCP) {
+      return scanFolderMCP(folderPath, recursive ?? false);
+    } else {
+      return scanFolderFS(folderPath, recursive ?? false);
+    }
   });
 
   // Get list of common folders for autocomplete

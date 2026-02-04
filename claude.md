@@ -21,7 +21,7 @@ Backtrack is a desktop application for the Gemini 3 Global Hackathon that provid
 - **Animations:** Framer Motion
 
 ## Current Status
-Day 1 in progress - Electron project initialized, basic IPC working. Next: MCP Filesystem integration.
+Day 1 complete - Electron + MCP Filesystem integrated and tested. Ready for Day 2 (Chat UI).
 
 ## Architecture
 ```
@@ -54,9 +54,9 @@ See `.claude/implementation-plan-F1.md` for detailed Day 1-2 tasks.
 - [x] Initialize Electron + React + TypeScript project
 - [x] Install all dependencies
 - [x] Configure Electron security (contextIsolation, etc.)
-- [ ] Set up MCP Filesystem Server integration
-- [x] Create IPC handlers for file operations (basic Node.js fs, MCP pending)
-- [x] Test folder scanning works (verified: 1088 files in Downloads)
+- [x] Set up MCP Filesystem Server integration
+- [x] Create IPC handlers for file operations
+- [x] Test folder scanning works (verified: backtrack-testing directory)
 - [x] Verify dev environment runs (`npm run dev`)
 
 ## Day 2 Checklist
