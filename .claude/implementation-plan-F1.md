@@ -277,52 +277,50 @@ F2 Planning (when ready)
 
 ### Day 2: Chat Interface UI + Gemini Integration
 
-#### 3. Build Floating Button Component
+#### 3. Build Floating Button Component ✅ COMPLETE
 
-- [ ] **Create Floating Button with Always-On-Top Behavior**
-  - [ ] Create `src/renderer/components/FloatingButton.tsx`
-  - [ ] Position fixed at bottom-right: `position: fixed; bottom: 24px; right: 24px;`
-  - [ ] Size: 64px × 64px circular button
-  - [ ] Background: Gradient (e.g., `bg-gradient-to-br from-blue-500 to-purple-600`)
-  - [ ] Icon: Chat bubble or sparkle icon (use lucide-react: `<MessageCircle />`)
-  - [ ] Add drop shadow: `shadow-2xl` in Tailwind
-  - [ ] Implement hover effect: scale up slightly (`hover:scale-110 transition-transform`)
-  - [ ] Add click handler that toggles chat drawer open/closed
-  - [ ] Implement z-index management: `z-50` to stay above other elements
+**NOTE:** Architecture changed to system-wide overlay (like Wisprflow). Added control panel for deployment.
 
-- [ ] **Add Loading/Active State Animations**
-  - [ ] When Gemini is processing, show rotating border animation:
-    ```css
-    @keyframes spin-border {
-      to { transform: rotate(360deg); }
-    }
-    .loading-border {
-      animation: spin-border 2s linear infinite;
-    }
-    ```
-  - [ ] When chat has new message, add pulsing animation
-  - [ ] Add subtle breathing animation when idle (scale 1.0 ↔ 1.05)
-  - [ ] Smooth transition between states (0.3s ease-in-out)
+- [x] **Create Main Control Panel Window**
+  - [x] Created `src/renderer/pages/MainControlPage.tsx`
+  - [x] Deploy button to show/hide floating button
+  - [x] Status messages and instructions
+  - [x] Beautiful gradient design
 
-- [ ] **Implement Click-to-Open/Close Logic**
-  - [ ] Use Zustand store for drawer open state:
-    ```typescript
-    interface UIState {
-      drawerOpen: boolean;
-      toggleDrawer: () => void;
-    }
-    ```
-  - [ ] Button click calls `toggleDrawer()` action
-  - [ ] When drawer opens, button icon changes to X (close icon)
-  - [ ] Add keyboard shortcut: Cmd/Ctrl + K to toggle drawer
+- [x] **Create Floating Button with Always-On-Top Behavior**
+  - [x] Create `src/renderer/components/FloatingButton.tsx`
+  - [x] System-wide overlay (separate window, 100x100px)
+  - [x] Always on top of all windows (including File Explorer)
+  - [x] Position at bottom-right: screenWidth-110, screenHeight-110
+  - [x] Background: Gradient (`bg-gradient-to-br from-blue-500 to-purple-600`)
+  - [x] Icon: Chat bubble (MessageCircle from lucide-react)
+  - [x] Drop shadow: `shadow-2xl`
+  - [x] Hover effect: scale 1.1x
+  - [x] Click handler toggles chat drawer via IPC
+  - [x] Click-through except on button hover
 
-#### 4. Build Chat Drawer Component
+- [x] **Add Loading/Active State Animations**
+  - [x] Rotating border animation when loading (Framer Motion)
+  - [x] Pulsing animation when new message arrives
+  - [x] Breathing animation when idle (scale 1.0 ↔ 1.05)
+  - [x] Smooth transitions (0.3s ease-in-out)
 
-- [ ] **Create Sliding Drawer with Smooth Animation**
-  - [ ] Create `src/renderer/components/ChatDrawer.tsx`
-  - [ ] Fixed width: 400px
-  - [ ] Full height: 100vh
-  - [ ] Position: Fixed right edge of screen
+- [x] **Implement Click-to-Open/Close Logic**
+  - [x] Created Zustand store (`src/renderer/store/uiStore.ts`)
+  - [x] IPC handlers for drawer control (toggle/open/close)
+  - [x] Button icon changes to X when drawer opens
+  - [x] Keyboard shortcut: Cmd/Ctrl + K
+  - [x] State polling every 500ms for sync
+
+#### 4. Build Chat Drawer Component - IN PROGRESS
+
+**NOTE:** Basic structure created as compact floating drawer (400x600px) positioned left of button.
+
+- [x] **Create Compact Floating Drawer**
+  - [x] Created `src/renderer/pages/ChatDrawerPage.tsx`
+  - [x] Fixed size: 400px × 600px (not full height)
+  - [x] Position: Left of floating button (relative positioning)
+  - [x] Transparent window with rounded container (rounded-2xl)
   - [ ] Implement slide-in animation using Framer Motion:
     ```typescript
     <motion.div
