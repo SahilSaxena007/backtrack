@@ -30,5 +30,6 @@ npm-debug.log*
 # Vite cache
 .vite/
 
-# Claude Code local settings
+# Claude Code local files (keep plans, ignore settings/memory)
 .claude/settings.local.json
+.claude/memory/
