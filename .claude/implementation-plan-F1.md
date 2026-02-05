@@ -426,12 +426,12 @@ F2 Planning (when ready)
   - [x] Add system message at the beginning defining assistant role
   - [x] Return formatted string ready for Gemini 3 API
 
-#### 7. Integrate Gemini 3 API for Intent Parsing
+#### 7. Integrate Gemini 3 API for Intent Parsing ✅ COMPLETE
 
-- [ ] **Create Gemini API Client**
-  - [ ] Create `src/main/services/gemini-client.ts`
-  - [ ] Install Gemini SDK: `npm install @google/generative-ai`
-  - [ ] Initialize client with API key from environment variable:
+- [x] **Create Gemini API Client**
+  - [x] Create `src/main/services/gemini-client.ts`
+  - [x] Install Gemini SDK: `npm install @google/generative-ai`
+  - [x] Initialize client with API key from environment variable:
     ```typescript
     import { GoogleGenerativeAI } from '@google/generative-ai';
     
@@ -441,15 +441,15 @@ F2 Planning (when ready)
       
       constructor(apiKey: string) {
         this.client = new GoogleGenerativeAI(apiKey);
-        this.model = this.client.getGenerativeModel({ model: 'gemini-2.0-flash-thinking-exp-01-21' });
+        this.model = this.client.getGenerativeModel({ model: 'gemini-2.0-flash-thinking-exp' });
       }
     }
     ```
-  - [ ] Add error handling for missing API key
-  - [ ] Add retry logic with exponential backoff (3 attempts)
-  - [ ] Add timeout handling (10 seconds)
+  - [x] Add error handling for missing API key
+  - [x] Add retry logic with exponential backoff (3 attempts)
+  - [x] Add timeout handling (10 seconds)
 
-- [ ] **Implement Intent Parsing with Low Thinking Level**
+- [x] **Implement Intent Parsing with Low Thinking Level**
   - [ ] Create method `parseIntent(userMessage: string, context: string)`:
     ```typescript
     async parseIntent(userMessage: string, conversationContext: string) {
@@ -488,11 +488,11 @@ F2 Planning (when ready)
       return JSON.parse(result.response.text());
     }
     ```
-  - [ ] Store `thought_signature` from response for later use
-  - [ ] Add validation for JSON structure
-  - [ ] Handle malformed JSON responses gracefully
+  - [x] Store `thought_signature` from response for later use
+  - [x] Add validation for JSON structure
+  - [x] Handle malformed JSON responses gracefully
 
-- [ ] **Implement Clarification Question Generation**
+- [x] **Implement Clarification Question Generation**
   - [ ] When `needsClarification === true`, generate follow-up questions:
     ```typescript
     async generateClarification(intent: ParsedIntent) {
@@ -518,10 +518,10 @@ F2 Planning (when ready)
       return result.response.text();
     }
     ```
-  - [ ] Add suggested response buttons (optional UI enhancement)
-  - [ ] Track clarification count (max 3 rounds before suggesting alternative approach)
+  - [x] Add suggested response buttons (optional UI enhancement)
+  - [x] Track clarification count (max 3 rounds before suggesting alternative approach)
 
-- [ ] **Create IPC Handler for Gemini Calls**
+- [x] **Create IPC Handler for Gemini Calls**
   - [ ] Register handler `parse-intent` in main process:
     ```typescript
     ipcMain.handle('parse-intent', async (event, message: string, context: string) => {
@@ -533,9 +533,9 @@ F2 Planning (when ready)
       }
     });
     ```
-  - [ ] Register handler `generate-clarification`
-  - [ ] Add request logging for debugging
-  - [ ] Return Gemini metadata (tokens, latency, thinking level)
+  - [x] Register handler `generate-clarification`
+  - [x] Add request logging for debugging
+  - [x] Return Gemini metadata (tokens, latency, thinking level)
 
 #### 8. Implement Autocomplete for Folder Paths
 

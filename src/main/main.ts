@@ -1,7 +1,11 @@
 import { app, BrowserWindow, ipcMain, screen } from 'electron';
 import * as path from 'path';
+import * as dotenv from 'dotenv';
 import { registerFilesystemHandlers } from './ipc/filesystem-handlers';
 import { registerGeminiHandlers } from './ipc/gemini-handlers';
+
+// Load environment variables from .env file
+dotenv.config();
 
 let mainControlWindow: BrowserWindow | null = null;
 let floatingButtonWindow: BrowserWindow | null = null;

@@ -8,7 +8,7 @@ export function ChatDrawerPage() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const { messages, isLoading, addUserMessage, addAssistantMessage, setLoading } =
+  const { messages, isLoading, addUserMessage, addAssistantMessage, setLoading, buildConversationContext } =
     useConversationStore();
 
   // Auto-scroll to bottom when new messages arrive
@@ -40,13 +40,73 @@ export function ChatDrawerPage() {
     // Show loading state
     setLoading(true);
 
-    // Simulate AI response (replace with actual Gemini API call in Task 7)
-    setTimeout(() => {
+    try {
+      // Build conversation context from message history
+      const conversationContext = buildConversationContext();
+
+      console.log('[ChatDrawer] Calling Gemini API to parse intent...');
+      const startTime = Date.now();
+
+      // Call Gemini API via IPC to parse intent
+      const result = await window.api.parseIntent(trimmed, conversationContext);
+
+      const duration = Date.now() - startTime;
+      console.log(`[ChatDrawer] Gemini responded in ${duration}ms:`, result);
+
+      if (!result.success) {
+        // Show technical error (as requested)
+        addAssistantMessage(
+          `❌ Error parsing your request:\n\n${result.error}\n\nPlease try again or check your Gemini API key configuration.`
+        );
+        setLoading(false);
+        return;
+      }
+
+      const intent = result.intent!;
+
+      // Check if clarification is needed
+      if (intent.needsClarification) {
+        console.log('[ChatDrawer] Intent unclear, generating clarification...');
+
+        // Generate clarification question
+        const clarificationResult = await window.api.generateClarification(intent);
+
+        if (clarificationResult.success && clarificationResult.question) {
+          addAssistantMessage(clarificationResult.question);
+        } else {
+          // Fallback clarification if generation fails
+          addAssistantMessage(
+            "I'd like to help, but I need a bit more information. Which folder would you like me to work with?"
+          );
+        }
+      } else {
+        // Intent is clear! Show confirmation and prepare for next step (F2 Planning)
+        const confirmationMessage = `✓ Got it! I'll help you **${intent.action}** files in **${intent.target}** ${intent.method !== 'unknown' ? `**${intent.method.replace('_', ' ')}**` : ''}.
+
+${intent.constraints.length > 0 ? `\n📋 Constraints: ${intent.constraints.join(', ')}` : ''}
+
+Ready to scan the folder and generate a plan. (This will connect to F2 Planning in the next phase!)
+
+_Clarity Score: ${(intent.clarityScore * 100).toFixed(0)}%_`;
+
+        addAssistantMessage(confirmationMessage);
+
+        // TODO: Hand off to F2 Planning Engine
+        console.log('[ChatDrawer] Ready to hand off to F2 Planning:', intent);
+      }
+
+      setLoading(false);
+
+    } catch (error) {
+      console.error('[ChatDrawer] Error in handleSendMessage:', error);
+
+      // Show technical error details
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
       addAssistantMessage(
-        "I understand you want to organize your files. This is a placeholder response. Gemini integration will be added in Task 7!"
+        `❌ Unexpected error:\n\n${errorMessage}\n\nPlease check the console for more details.`
       );
       setLoading(false);
-    }, 1500);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
