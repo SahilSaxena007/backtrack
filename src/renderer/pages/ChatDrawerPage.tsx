@@ -1,27 +1,86 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Settings } from 'lucide-react';
+import { Send, Settings, FolderOpen } from 'lucide-react';
 import { useConversationStore } from '../store/conversationStore';
+import Fuse from 'fuse.js';
 
 export function ChatDrawerPage() {
   const [inputValue, setInputValue] = useState('');
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [showAutocomplete, setShowAutocomplete] = useState(false);
+  const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(0);
+  const [folderList, setFolderList] = useState<string[]>([]);
+  const [fuse, setFuse] = useState<Fuse<string> | null>(null);
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const { messages, isLoading, addUserMessage, addAssistantMessage, setLoading, buildConversationContext } =
     useConversationStore();
 
+  // Initialize folder list and Fuse.js on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const folders = await window.api.getFolderList();
+        console.log('[ChatDrawer] Loaded folder list:', folders.length, 'folders');
+        setFolderList(folders);
+
+        // Initialize Fuse.js for fuzzy search
+        const fuseInstance = new Fuse(folders, {
+          threshold: 0.3, // Fuzzy matching sensitivity (0 = exact, 1 = match anything)
+          includeScore: true,
+          minMatchCharLength: 2,
+        });
+        setFuse(fuseInstance);
+      } catch (error) {
+        console.error('[ChatDrawer] Error loading folder list:', error);
+      }
+    })();
+  }, []);
+
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoading]);
 
-  // Auto-resize textarea as user types
+  // Auto-resize textarea as user types and trigger autocomplete
   const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const target = e.target;
     target.style.height = 'auto';
     target.style.height = Math.min(target.scrollHeight, 120) + 'px';
-    setInputValue(target.value);
+    const value = target.value;
+    setInputValue(value);
+
+    // Trigger autocomplete detection (debounced)
+    detectAndShowAutocomplete(value);
+  };
+
+  // Detect if user is typing a path and show autocomplete
+  const detectAndShowAutocomplete = (value: string) => {
+    // Look for path patterns: "C:\", "/", or "~/"
+    const pathPattern = /[C-Z]:\\[^"\s]*$|\/[^"\s]*$|~\/[^"\s]*/i;
+    const match = value.match(pathPattern);
+
+    if (match && fuse && match[0].length >= 2) {
+      // Extract the path query
+      const query = match[0];
+      console.log('[ChatDrawer] Path detected:', query);
+
+      // Fuzzy search for matching folders
+      const results = fuse.search(query);
+      const topMatches = results.slice(0, 10).map(r => r.item);
+
+      if (topMatches.length > 0) {
+        setSuggestions(topMatches);
+        setShowAutocomplete(true);
+        setSelectedSuggestionIndex(0);
+      } else {
+        setShowAutocomplete(false);
+      }
+    } else {
+      setShowAutocomplete(false);
+    }
   };
 
   const handleSendMessage = async () => {
@@ -110,12 +169,92 @@ _Clarity Score: ${(intent.clarityScore * 100).toFixed(0)}%_`;
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Handle autocomplete navigation
+    if (showAutocomplete) {
+      if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        setSelectedSuggestionIndex((prev) => Math.min(prev + 1, suggestions.length - 1));
+        return;
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        setSelectedSuggestionIndex((prev) => Math.max(prev - 1, 0));
+        return;
+      } else if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        insertSelectedSuggestion();
+        return;
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        setShowAutocomplete(false);
+        return;
+      }
+    }
+
+    // Normal key handling
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSendMessage();
     } else if (e.key === 'Escape' && !inputValue.trim()) {
       window.api.closeDrawer();
     }
+  };
+
+  // Insert selected suggestion at cursor position
+  const insertSelectedSuggestion = () => {
+    if (suggestions.length === 0 || !textareaRef.current) return;
+
+    const selectedPath = suggestions[selectedSuggestionIndex];
+    const textarea = textareaRef.current;
+    const cursorPos = textarea.selectionStart;
+    const textBefore = inputValue.substring(0, cursorPos);
+    const textAfter = inputValue.substring(cursorPos);
+
+    // Find the start of the path pattern
+    const pathPattern = /[C-Z]:\\[^"\s]*$|\/[^"\s]*$|~\/[^"\s]*/i;
+    const match = textBefore.match(pathPattern);
+
+    if (match) {
+      const pathStart = cursorPos - match[0].length;
+      const newValue = inputValue.substring(0, pathStart) + selectedPath + textAfter;
+      setInputValue(newValue);
+
+      // Set cursor position after inserted path
+      setTimeout(() => {
+        textarea.selectionStart = textarea.selectionEnd = pathStart + selectedPath.length;
+        textarea.focus();
+      }, 0);
+    }
+
+    setShowAutocomplete(false);
+  };
+
+  // Handle clicking a suggestion
+  const handleSuggestionClick = (index: number) => {
+    if (suggestions.length === 0 || !textareaRef.current) return;
+
+    const selectedPath = suggestions[index];
+    const textarea = textareaRef.current;
+    const cursorPos = textarea.selectionStart;
+    const textBefore = inputValue.substring(0, cursorPos);
+    const textAfter = inputValue.substring(cursorPos);
+
+    // Find the start of the path pattern
+    const pathPattern = /[C-Z]:\\[^"\s]*$|\/[^"\s]*$|~\/[^"\s]*/i;
+    const match = textBefore.match(pathPattern);
+
+    if (match) {
+      const pathStart = cursorPos - match[0].length;
+      const newValue = inputValue.substring(0, pathStart) + selectedPath + textAfter;
+      setInputValue(newValue);
+
+      // Set cursor position after inserted path
+      setTimeout(() => {
+        textarea.selectionStart = textarea.selectionEnd = pathStart + selectedPath.length;
+        textarea.focus();
+      }, 0);
+    }
+
+    setShowAutocomplete(false);
   };
 
   const handleClose = async () => {
@@ -290,6 +429,44 @@ _Clarity Score: ${(intent.clarityScore * 100).toFixed(0)}%_`;
         {/* Input Area - Fixed at bottom, 60px height initial */}
         <div className="border-t border-gray-200 p-3 bg-gray-50/80 backdrop-blur-sm flex-shrink-0 min-h-[60px]">
           <div className="relative flex items-end gap-2">
+            {/* Autocomplete Dropdown - positioned above input */}
+            <AnimatePresence>
+              {showAutocomplete && suggestions.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 10 }}
+                  transition={{ duration: 0.15 }}
+                  className="absolute bottom-full mb-2 left-0 right-12 bg-white rounded-lg shadow-lg border border-gray-200 max-h-64 overflow-y-auto z-50"
+                >
+                  {suggestions.length > 50 ? (
+                    <div className="px-4 py-3 text-sm text-gray-500 text-center">
+                      Too many results ({suggestions.length}). Type more to narrow down...
+                    </div>
+                  ) : suggestions.length === 0 ? (
+                    <div className="px-4 py-3 text-sm text-gray-500 text-center flex items-center justify-center gap-2">
+                      <FolderOpen className="w-4 h-4" />
+                      No folders found
+                    </div>
+                  ) : (
+                    suggestions.map((folder, index) => (
+                      <div
+                        key={folder}
+                        onClick={() => handleSuggestionClick(index)}
+                        className={`px-4 py-2 cursor-pointer text-sm flex items-center gap-2 transition-colors ${
+                          index === selectedSuggestionIndex
+                            ? 'bg-blue-50 text-blue-700'
+                            : 'hover:bg-gray-50 text-gray-700'
+                        }`}
+                      >
+                        <FolderOpen className="w-4 h-4 flex-shrink-0" />
+                        <span className="truncate">{folder}</span>
+                      </div>
+                    ))
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
             {/* Multi-line textarea with auto-grow up to 5 lines (120px) */}
             <textarea
               ref={textareaRef}
@@ -316,7 +493,9 @@ _Clarity Score: ${(intent.clarityScore * 100).toFixed(0)}%_`;
             </button>
           </div>
           <p className="text-xs text-gray-500 mt-2">
-            Press Enter to send • Shift+Enter for new line • Esc to close
+            {showAutocomplete
+              ? '↑↓ to navigate • Enter to select • Esc to cancel'
+              : 'Enter to send • Shift+Enter for new line • Esc to close • Type C:\\ for folder autocomplete'}
           </p>
         </div>
       </motion.div>

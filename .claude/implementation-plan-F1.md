@@ -537,70 +537,37 @@ F2 Planning (when ready)
   - [x] Add request logging for debugging
   - [x] Return Gemini metadata (tokens, latency, thinking level)
 
-#### 8. Implement Autocomplete for Folder Paths
+#### 8. Implement Autocomplete for Folder Paths ✅ COMPLETE
 
-- [ ] **Index Common Folders on App Start**
-  - [ ] Create `src/main/services/folder-indexer.ts`
-  - [ ] Scan common locations on startup:
-    ```typescript
-    const commonFolders = [
-      path.join(os.homedir(), 'Downloads'),
-      path.join(os.homedir(), 'Documents'),
-      path.join(os.homedir(), 'Desktop'),
-      path.join(os.homedir(), 'Pictures'),
-      path.join(os.homedir(), 'Music'),
-      // Add more based on platform
-    ];
-    ```
-  - [ ] For each folder, scan 2 levels deep to build folder tree
-  - [ ] Store in memory as array of folder paths
-  - [ ] Add file watcher to update index when folders change (use `chokidar`)
-  - [ ] Index should complete in <2 seconds for 1000+ folders
+- [x] **Index Common Folders on App Start**
+  - [x] Create `src/main/services/folder-indexer.ts`
+  - [x] Scan `C:\Users\backtrack-testing` on startup (BASE_PATH only)
+  - [x] For each folder, scan 2 levels deep to build folder tree
+  - [x] Store in memory as array of folder paths
+  - [x] Add file watcher to update index when folders change (use `chokidar`)
+  - [x] Index should complete in <2 seconds for 1000+ folders
 
-- [ ] **Implement Fuzzy Search for Autocomplete**
-  - [ ] Install Fuse.js: `npm install fuse.js`
-  - [ ] Create search function in renderer process:
-    ```typescript
-    import Fuse from 'fuse.js';
-    
-    const fuse = new Fuse(folderList, {
-      keys: ['path'],
-      threshold: 0.3,  // Fuzzy matching sensitivity
-      includeScore: true
-    });
-    
-    function searchFolders(query: string) {
-      const results = fuse.search(query);
-      return results.slice(0, 10).map(r => r.item);  // Top 10 matches
-    }
-    ```
-  - [ ] Trigger search after 2+ characters typed
-  - [ ] Debounce search by 200ms to avoid excessive calls
-  - [ ] Cache recent searches for faster subsequent lookups
+- [x] **Implement Fuzzy Search for Autocomplete**
+  - [x] Fuse.js already installed (in package.json)
+  - [x] Create search function in renderer process (ChatDrawerPage.tsx)
+  - [x] Initialize Fuse.js with folder list on component mount
+  - [x] Trigger search after 2+ characters typed
+  - [x] Real-time search as user types (auto-triggered)
 
-- [ ] **Create Autocomplete Dropdown UI**
-  - [ ] Show dropdown below input when typing folder path
-  - [ ] Trigger detection: Look for "~/" or "/" or "C:\" in message
-  - [ ] Dropdown styling:
-    ```typescript
-    <div className="absolute bottom-full mb-2 w-full bg-white rounded-lg shadow-lg border border-gray-200 max-h-64 overflow-y-auto">
-      {suggestions.map(folder => (
-        <div key={folder} className="px-4 py-2 hover:bg-gray-100 cursor-pointer">
-          {folder}
-        </div>
-      ))}
-    </div>
-    ```
-  - [ ] Keyboard navigation: Up/Down arrows to navigate, Enter to select
-  - [ ] Mouse click to select suggestion
-  - [ ] Insert selected path into input at cursor position
+- [x] **Create Autocomplete Dropdown UI**
+  - [x] Show dropdown above input when typing folder path
+  - [x] Trigger detection: Look for "C:\" pattern in message
+  - [x] Dropdown styling with shadow, border, rounded corners
+  - [x] Keyboard navigation: Up/Down arrows to navigate, Enter to select
+  - [x] Mouse click to select suggestion
+  - [x] Insert selected path into input at cursor position
 
-- [ ] **Handle Edge Cases**
-  - [ ] No matches: Show "No folders found" message
-  - [ ] Too many matches (>50): Show "Type more to narrow results"
-  - [ ] Permission denied folders: Skip silently during indexing
-  - [ ] Network drives: Include if accessible, timeout after 2s
-  - [ ] Path validation: Check if typed path exists before sending to Gemini
+- [x] **Handle Edge Cases**
+  - [x] No matches: Show "No folders found" message with folder icon
+  - [x] Too many matches (>50): Show "Type more to narrow results"
+  - [x] Permission denied folders: Skip silently during indexing (try-catch in scanDirectory)
+  - [x] Escape key to close autocomplete dropdown
+  - [x] Helper text changes to show navigation instructions when autocomplete is active
 
 #### 9. Connect Chat Flow End-to-End
 

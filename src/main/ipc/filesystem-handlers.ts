@@ -2,6 +2,7 @@ import { IpcMain } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
 import { getMCPClient } from '../services/mcp-client';
+import { getFolderIndexer } from '../services/folder-indexer';
 
 interface FileMetadata {
   name: string;
@@ -30,20 +31,16 @@ const BASE_PATH = 'C:\\Users\\backtrack-testing';
 let useMCP = false; // Flag to switch between MCP and fs
 
 /**
- * Get all subdirectories in backtrack-testing
+ * Get all indexed folders (scanned 2 levels deep)
  */
-function getCommonFolders(): string[] {
+async function getIndexedFolders(): Promise<string[]> {
   try {
-    // Get all subdirectories in backtrack-testing
-    const entries = fs.readdirSync(BASE_PATH, { withFileTypes: true });
-    const folders = entries
-      .filter(entry => entry.isDirectory())
-      .map(entry => path.join(BASE_PATH, entry.name));
-
-    console.log(`[Filesystem] Found ${folders.length} folders in ${BASE_PATH}:`, folders);
+    const indexer = await getFolderIndexer();
+    const folders = indexer.getFolders();
+    console.log(`[Filesystem] Returning ${folders.length} indexed folders`);
     return folders;
   } catch (error) {
-    console.error(`[Filesystem] Error reading ${BASE_PATH}:`, error);
+    console.error('[Filesystem] Error getting indexed folders:', error);
     return [];
   }
 }
@@ -175,7 +172,7 @@ async function validateFolderPath(folderPath: string): Promise<ValidationResult>
  * Register all filesystem IPC handlers
  */
 export function registerFilesystemHandlers(ipcMain: IpcMain): void {
-  // Initialize MCP client on startup
+  // Initialize MCP client and folder indexer on startup
   (async () => {
     try {
       await getMCPClient([BASE_PATH]);
@@ -184,6 +181,14 @@ export function registerFilesystemHandlers(ipcMain: IpcMain): void {
     } catch (error) {
       console.warn('[Filesystem] MCP initialization failed, falling back to Node.js fs:', error);
       useMCP = false;
+    }
+
+    // Initialize folder indexer for autocomplete
+    try {
+      await getFolderIndexer();
+      console.log('[Filesystem] Folder indexer initialized');
+    } catch (error) {
+      console.error('[Filesystem] Folder indexer initialization failed:', error);
     }
   })();
 
@@ -198,10 +203,10 @@ export function registerFilesystemHandlers(ipcMain: IpcMain): void {
     }
   });
 
-  // Get list of common folders for autocomplete
+  // Get list of indexed folders for autocomplete (scanned 2 levels deep)
   ipcMain.handle('get-folder-list', async () => {
     console.log('[IPC] get-folder-list');
-    return getCommonFolders();
+    return await getIndexedFolders();
   });
 
   // Validate folder path
