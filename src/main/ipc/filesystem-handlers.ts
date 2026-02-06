@@ -36,7 +36,9 @@ let useMCP = false; // Flag to switch between MCP and fs
 async function getIndexedFolders(): Promise<string[]> {
   try {
     const indexer = await getFolderIndexer();
-    const folders = indexer.getFolders();
+    const folders = indexer.getItems()
+      .filter(item => item.isDirectory)
+      .map(item => item.fullPath);
     console.log(`[Filesystem] Returning ${folders.length} indexed folders`);
     return folders;
   } catch (error) {

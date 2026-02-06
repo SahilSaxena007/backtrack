@@ -32,7 +32,7 @@ function createMainControlWindow(): void {
 
   // Load the control panel page
   if (isDev) {
-    mainControlWindow.loadURL('http://localhost:5173/#/control-panel');
+    mainControlWindow.loadURL('http://localhost:8000/#/control-panel');
   } else {
     mainControlWindow.loadFile(path.join(__dirname, '../renderer/index.html'), {
       hash: 'control-panel'
@@ -87,7 +87,7 @@ function createFloatingButtonWindow(): void {
 
   // Load the floating button page
   if (isDev) {
-    floatingButtonWindow.loadURL('http://localhost:5173/#/floating-button');
+    floatingButtonWindow.loadURL('http://localhost:8000/#/floating-button');
   } else {
     floatingButtonWindow.loadFile(path.join(__dirname, '../renderer/index.html'), {
       hash: 'floating-button'
@@ -140,7 +140,7 @@ function createChatDrawerWindow(): void {
 
   // Load the chat drawer page
   if (isDev) {
-    chatDrawerWindow.loadURL('http://localhost:5173/#/chat-drawer');
+    chatDrawerWindow.loadURL('http://localhost:8000/#/chat-drawer');
   } else {
     chatDrawerWindow.loadFile(path.join(__dirname, '../renderer/index.html'), {
       hash: 'chat-drawer'

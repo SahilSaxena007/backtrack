@@ -32,7 +32,7 @@ export class FolderIndexer {
       this.setupWatcher();
 
       const duration = Date.now() - startTime;
-      console.log(`[FolderIndexer] Indexed ${this.folders.length} folders in ${duration}ms`);
+      console.log(`[FolderIndexer] Indexed ${this.items.length} items in ${duration}ms`);
     } catch (error) {
       console.error('[FolderIndexer] Initialization failed:', error);
       throw error;
