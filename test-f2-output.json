@@ -1,0 +1,319 @@
+{
+  "plan_id": "plan_1701010100000",
+  "actions": [
+    {
+      "id": "action_001",
+      "type": "create_folder",
+      "params": {
+        "path": "C:\\Users\\backtrack-testing\\Downloads\\Documents"
+      },
+      "description": "Create folder for document files",
+      "depends_on": [],
+      "estimated_time_ms": 100
+    },
+    {
+      "id": "action_002",
+      "type": "create_folder",
+      "params": {
+        "path": "C:\\Users\\backtrack-testing\\Downloads\\Images"
+      },
+      "description": "Create folder for image files",
+      "depends_on": [],
+      "estimated_time_ms": 100
+    },
+    {
+      "id": "action_003",
+      "type": "create_folder",
+      "params": {
+        "path": "C:\\Users\\backtrack-testing\\Downloads\\Audio"
+      },
+      "description": "Create folder for audio files",
+      "depends_on": [],
+      "estimated_time_ms": 100
+    },
+    {
+      "id": "action_004",
+      "type": "create_folder",
+      "params": {
+        "path": "C:\\Users\\backtrack-testing\\Downloads\\Applications"
+      },
+      "description": "Create folder for application files",
+      "depends_on": [],
+      "estimated_time_ms": 100
+    },
+    {
+      "id": "action_005",
+      "type": "move_files_batch",
+      "params": {
+        "source": "C:\\Users\\backtrack-testing\\Downloads",
+        "destination": "C:\\Users\\backtrack-testing\\Downloads\\Documents",
+        "files": [
+          "file.pdf",
+          "file.txt",
+          "file.pptx",
+          "file.xlsx"
+        ]
+      },
+      "description": "Move all .pdf, .txt, .pptx, .xlsx files to the Documents folder",
+      "depends_on": [
+        "action_001"
+      ],
+      "estimated_time_ms": 400
+    },
+    {
+      "id": "action_006",
+      "type": "move_files_batch",
+      "params": {
+        "source": "C:\\Users\\backtrack-testing\\Downloads",
+        "destination": "C:\\Users\\backtrack-testing\\Downloads\\Images",
+        "files": [
+          "file.jpg",
+          "file.png"
+        ]
+      },
+      "description": "Move all .jpg, .png files to the Images folder",
+      "depends_on": [
+        "action_002"
+      ],
+      "estimated_time_ms": 200
+    },
+    {
+      "id": "action_007",
+      "type": "move_files_batch",
+      "params": {
+        "source": "C:\\Users\\backtrack-testing\\Downloads",
+        "destination": "C:\\Users\\backtrack-testing\\Downloads\\Audio",
+        "files": [
+          "file.mp3"
+        ]
+      },
+      "description": "Move all .mp3 files to the Audio folder",
+      "depends_on": [
+        "action_003"
+      ],
+      "estimated_time_ms": 100
+    },
+    {
+      "id": "action_008",
+      "type": "move_files_batch",
+      "params": {
+        "source": "C:\\Users\\backtrack-testing\\Downloads",
+        "destination": "C:\\Users\\backtrack-testing\\Downloads\\Applications",
+        "files": [
+          "file.exe"
+        ]
+      },
+      "description": "Move all .exe files to the Applications folder",
+      "depends_on": [
+        "action_004"
+      ],
+      "estimated_time_ms": 100
+    }
+  ],
+  "undo_plan": {
+    "undo_plan_id": "undo_1770391280686",
+    "original_plan_id": "plan_1701010100000",
+    "undo_actions": [
+      {
+        "id": "undo_001",
+        "type": "move_files_batch",
+        "params": {
+          "files": [
+            "file.exe"
+          ],
+          "source": "C:\\Users\\backtrack-testing\\Downloads\\Applications",
+          "destination": "C:\\Users\\backtrack-testing\\Downloads"
+        },
+        "description": "[UNDO] Move 1 files back to original location",
+        "depends_on": [],
+        "estimated_time_ms": 100
+      },
+      {
+        "id": "undo_002",
+        "type": "move_files_batch",
+        "params": {
+          "files": [
+            "file.mp3"
+          ],
+          "source": "C:\\Users\\backtrack-testing\\Downloads\\Audio",
+          "destination": "C:\\Users\\backtrack-testing\\Downloads"
+        },
+        "description": "[UNDO] Move 1 files back to original location",
+        "depends_on": [],
+        "estimated_time_ms": 100
+      },
+      {
+        "id": "undo_003",
+        "type": "move_files_batch",
+        "params": {
+          "files": [
+            "file.jpg",
+            "file.png"
+          ],
+          "source": "C:\\Users\\backtrack-testing\\Downloads\\Images",
+          "destination": "C:\\Users\\backtrack-testing\\Downloads"
+        },
+        "description": "[UNDO] Move 2 files back to original location",
+        "depends_on": [],
+        "estimated_time_ms": 200
+      },
+      {
+        "id": "undo_004",
+        "type": "move_files_batch",
+        "params": {
+          "files": [
+            "file.pdf",
+            "file.txt",
+            "file.pptx",
+            "file.xlsx"
+          ],
+          "source": "C:\\Users\\backtrack-testing\\Downloads\\Documents",
+          "destination": "C:\\Users\\backtrack-testing\\Downloads"
+        },
+        "description": "[UNDO] Move 4 files back to original location",
+        "depends_on": [],
+        "estimated_time_ms": 400
+      },
+      {
+        "id": "undo_005",
+        "type": "create_folder",
+        "params": {
+          "path": "C:\\Users\\backtrack-testing\\Downloads\\Applications",
+          "undo_operation": "remove_folder"
+        },
+        "description": "[UNDO] Remove folder: C:\\Users\\backtrack-testing\\Downloads\\Applications",
+        "depends_on": [],
+        "estimated_time_ms": 50
+      },
+      {
+        "id": "undo_006",
+        "type": "create_folder",
+        "params": {
+          "path": "C:\\Users\\backtrack-testing\\Downloads\\Audio",
+          "undo_operation": "remove_folder"
+        },
+        "description": "[UNDO] Remove folder: C:\\Users\\backtrack-testing\\Downloads\\Audio",
+        "depends_on": [],
+        "estimated_time_ms": 50
+      },
+      {
+        "id": "undo_007",
+        "type": "create_folder",
+        "params": {
+          "path": "C:\\Users\\backtrack-testing\\Downloads\\Images",
+          "undo_operation": "remove_folder"
+        },
+        "description": "[UNDO] Remove folder: C:\\Users\\backtrack-testing\\Downloads\\Images",
+        "depends_on": [],
+        "estimated_time_ms": 50
+      },
+      {
+        "id": "undo_008",
+        "type": "create_folder",
+        "params": {
+          "path": "C:\\Users\\backtrack-testing\\Downloads\\Documents",
+          "undo_operation": "remove_folder"
+        },
+        "description": "[UNDO] Remove folder: C:\\Users\\backtrack-testing\\Downloads\\Documents",
+        "depends_on": [],
+        "estimated_time_ms": 50
+      }
+    ],
+    "checkpoint": {
+      "checkpoint_id": "checkpoint_1770391280684",
+      "plan_id": "plan_1701010100000",
+      "timestamp": "2026-02-06T15:21:20.684Z",
+      "target_folder": "C:\\Users\\backtrack-testing\\Downloads",
+      "file_snapshot": [
+        {
+          "path": "C:\\Users\\backtrack-testing\\Downloads\\report.pdf",
+          "size": 1024000,
+          "modified": "2025-01-15T10:00:00Z"
+        },
+        {
+          "path": "C:\\Users\\backtrack-testing\\Downloads\\vacation.jpg",
+          "size": 3500000,
+          "modified": "2025-01-14T12:00:00Z"
+        },
+        {
+          "path": "C:\\Users\\backtrack-testing\\Downloads\\notes.txt",
+          "size": 2048,
+          "modified": "2025-01-16T09:00:00Z"
+        },
+        {
+          "path": "C:\\Users\\backtrack-testing\\Downloads\\presentation.pptx",
+          "size": 5000000,
+          "modified": "2025-01-13T15:00:00Z"
+        },
+        {
+          "path": "C:\\Users\\backtrack-testing\\Downloads\\budget.xlsx",
+          "size": 150000,
+          "modified": "2025-01-15T14:00:00Z"
+        },
+        {
+          "path": "C:\\Users\\backtrack-testing\\Downloads\\song.mp3",
+          "size": 8000000,
+          "modified": "2025-01-12T20:00:00Z"
+        },
+        {
+          "path": "C:\\Users\\backtrack-testing\\Downloads\\installer.exe",
+          "size": 25000000,
+          "modified": "2025-01-11T11:00:00Z"
+        },
+        {
+          "path": "C:\\Users\\backtrack-testing\\Downloads\\photo_001.png",
+          "size": 2000000,
+          "modified": "2025-01-16T08:00:00Z"
+        }
+      ]
+    },
+    "deterministic": true
+  },
+  "safety_analysis": {
+    "overall_risk": "safe",
+    "is_safe": true,
+    "issues": [],
+    "checks": {
+      "circular_dependencies": {
+        "passed": true
+      },
+      "protected_paths": {
+        "passed": true
+      },
+      "file_conflicts": {
+        "passed": true
+      },
+      "disk_space": {
+        "passed": true
+      },
+      "data_loss_risk": {
+        "passed": true
+      },
+      "permission_issues": {
+        "passed": true
+      }
+    },
+    "ai_analysis": "AI analysis failed to parse"
+  },
+  "summary": {
+    "total_actions": 8,
+    "files_affected": 8,
+    "folders_created": 4
+  },
+  "gemini_metadata": {
+    "stage1_thinking_level": "low",
+    "stage1_signature": "",
+    "stage1_latency_ms": 9125,
+    "stage1_tokens": 2843,
+    "stage2_thinking_level": "high",
+    "stage2_signature": "",
+    "stage2_latency_ms": 10210,
+    "stage2_tokens": 3436,
+    "stage3_thinking_level": "high",
+    "stage3_signature": "",
+    "stage3_latency_ms": 13966,
+    "stage3_tokens": 0,
+    "total_time_ms": 33303,
+    "total_tokens": 6279
+  }
+}

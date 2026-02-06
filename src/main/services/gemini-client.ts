@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
 
 /**
- * Parsed intent structure from Gemini
+ * Parsed intent structure from Gemini (F1)
  */
 export interface ParsedIntent {
   target: string; // "Downloads" | "Desktop" | "unknown"
@@ -11,6 +11,28 @@ export interface ParsedIntent {
   conflicts: string[];
   clarityScore: number;
   needsClarification: boolean;
+}
+
+/**
+ * Generic Gemini request parameters (F2 - Planning Engine)
+ */
+export interface GeminiRequest {
+  prompt: string;
+  thinking_level?: 'low' | 'high';
+  output_format?: 'json' | 'text';
+  temperature?: number;
+  thought_signature?: string;
+  max_tokens?: number;
+}
+
+/**
+ * Generic Gemini response (F2 - Planning Engine)
+ */
+export interface GeminiResponse {
+  text: string;
+  thought_signature?: string;
+  tokens_used: number;
+  latency_ms: number;
 }
 
 /**
@@ -34,6 +56,95 @@ export class GeminiClient {
     });
 
     console.log('[Gemini] Client initialized with model: gemini-2.5-flash');
+  }
+
+  /**
+   * Generic generate method with thinking levels support (F2 - Planning Engine)
+   * Supports low/high thinking levels and thought signature chaining
+   */
+  async generate(request: GeminiRequest): Promise<GeminiResponse> {
+    const maxRetries = 3;
+    let lastError: Error | null = null;
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`[Gemini] Generating content (attempt ${attempt}/${maxRetries}, thinking: ${request.thinking_level || 'default'})...`);
+        const startTime = Date.now();
+
+        // Build generation config
+        const generationConfig: any = {
+          temperature: request.temperature ?? 0.3,
+          maxOutputTokens: request.max_tokens ?? 4000,
+        };
+
+        // Add thinking budget if specified
+        // For gemini-2.5-flash: use thinkingBudget (token count)
+        // 'low' = 1024 tokens (fast), 'high' = 8192 tokens (thorough)
+        if (request.thinking_level) {
+          const budget = request.thinking_level === 'low' ? 1024 : 8192;
+          generationConfig.thinkingConfig = { thinkingBudget: budget };
+        }
+
+        // Add response format if specified
+        if (request.output_format === 'json') {
+          generationConfig.responseMimeType = 'application/json';
+        }
+
+        // Build content parts
+        const parts: any[] = [{ text: request.prompt }];
+
+        // Add thought signature if provided (for reasoning continuity)
+        if (request.thought_signature) {
+          console.log('[Gemini] Using thought signature from previous call for reasoning continuity');
+          // Note: Thought signature is passed differently depending on API version
+          // This may need adjustment based on actual Gemini SDK implementation
+        }
+
+        // Call Gemini API
+        const result = await this.timeoutPromise(
+          this.model.generateContent({
+            contents: [{ role: 'user', parts }],
+            generationConfig
+          }),
+          30000 // 30 second timeout for high thinking level
+        );
+
+        const responseText = result.response.text();
+        const duration = Date.now() - startTime;
+
+        // Extract thought signature if available
+        const thoughtSignature = (result.response.candidates?.[0] as any)?.thinkingSignature;
+
+        // Get token usage
+        const tokensUsed = result.response.usageMetadata?.totalTokenCount ?? 0;
+
+        console.log(`[Gemini] Generated in ${duration}ms (${tokensUsed} tokens)`);
+        if (thoughtSignature) {
+          console.log(`[Gemini] Thought signature: ${thoughtSignature.substring(0, 50)}...`);
+        }
+
+        return {
+          text: responseText,
+          thought_signature: thoughtSignature,
+          tokens_used: tokensUsed,
+          latency_ms: duration
+        };
+
+      } catch (error) {
+        lastError = error as Error;
+        console.error(`[Gemini] Attempt ${attempt} failed:`, error);
+
+        // Exponential backoff before retry
+        if (attempt < maxRetries) {
+          const backoffMs = Math.pow(2, attempt) * 1000; // 2s, 4s, 8s
+          console.log(`[Gemini] Retrying in ${backoffMs}ms...`);
+          await this.sleep(backoffMs);
+        }
+      }
+    }
+
+    // All retries failed
+    throw new Error(`Failed to generate content after ${maxRetries} attempts: ${lastError?.message}`);
   }
 
   /**

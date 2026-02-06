@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as dotenv from 'dotenv';
 import { registerFilesystemHandlers } from './ipc/filesystem-handlers';
 import { registerGeminiHandlers } from './ipc/gemini-handlers';
+import { registerPlanningHandlers } from './ipc/planning-handlers';
 
 // Load environment variables from .env file
 dotenv.config();
@@ -156,6 +157,7 @@ function createChatDrawerWindow(): void {
 function setupIPC(): void {
   registerFilesystemHandlers(ipcMain);
   registerGeminiHandlers(ipcMain);
+  registerPlanningHandlers(ipcMain);
 
   // Simple ping handler for testing IPC
   ipcMain.handle('ping', () => 'pong');

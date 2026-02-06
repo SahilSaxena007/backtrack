@@ -592,18 +592,14 @@ F2 Planning (when ready)
     - [ ] Add confirmation message: "Got it! Let me scan your folder..."
     - [ ] Hand off to F2 Planning (next phase)
 
-- [ ] **Integrate Folder Scanning**
-  - [ ] Once intent is clear, scan target folder via MCP:
-    ```typescript
-    const scanResult = await window.api.scanFolder(intent.target);
-    if (scanResult.success) {
-      // Pass to F2 with: userIntent + files + constraints
-    } else {
-      // Show error: "Couldn't access folder: {error}"
-    }
-    ```
-  - [ ] Show scanning progress in chat: "Scanning 35 files..."
-  - [ ] Add loading animation during scan (spinning icon)
+- [x] **Integrate Folder Scanning** ✅ COMPLETE
+  - [x] Once intent is clear, scan target folder via MCP
+  - [x] Call `window.api.scanFolder(intent.target, true)` for recursive scan
+  - [x] Handle scan errors and show user-friendly error messages
+  - [x] Store scanned files in F1 → F2 handoff data structure
+  - [x] Save handoff data to localStorage for F2 to consume
+  - [x] Show scanning progress in chat: "Scanning folder..."
+  - [x] Display scan results: "Scanned X items"
 
 - [ ] **Error Handling**
   - [ ] Gemini API error: "Sorry, I'm having trouble processing that. Please try again."

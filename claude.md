@@ -8,7 +8,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **DO NOT use `.claude/progress.md` as a reference file.** Only update it to mark completed tasks. Use CLAUDE.md and implementation plans for context.
 
-**Update `.claude/implementation-plan-F1.md` checklist tasks** after completing each task implementation. Mark all subtasks as `[x]` and note what was accomplished.
+**Update `.claude/implementation-plan-F1.md` or `.claude/implementation-plan-F2.md` checklist tasks** after completing each task implementation. Mark all subtasks as `[x]` and note what was accomplished.
+
+**Update `CLAUDE.md` after completing each task**
 
 ## Project Overview
 
@@ -17,6 +19,7 @@ Backtrack is an Electron desktop application for AI-powered file organization, b
 ## Key Architecture Decisions
 
 ### Multi-Window System (Wisprflow-style)
+
 The app uses **three separate Electron windows**, not a traditional single-window app:
 
 1. **Main Control Panel** (`MainControlPage`) - 600x400px
@@ -39,20 +42,26 @@ The app uses **three separate Electron windows**, not a traditional single-windo
 **Critical**: Windows are created/destroyed dynamically via IPC handlers (`deploy-floating-button`, `hide-floating-button`). When control panel closes, all windows close.
 
 ### IPC Communication Pattern
+
 All renderer↔main communication uses **typed IPC via preload script** (`src/main/preload.ts`):
+
 - Renderer calls `window.api.methodName()`
 - Main process handles via `ipcMain.handle('method-name', ...)`
 - Security: `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`
 
 ### State Management
+
 Two Zustand stores in renderer process:
+
 - **`uiStore.ts`**: Drawer visibility, loading state, new message flags
 - **`conversationStore.ts`**: Message history (user/assistant), conversation ID
 
 **Important**: Button polls drawer state every 500ms to stay synced (see `FloatingButton.tsx`).
 
 ### MCP Filesystem Integration
+
 File operations use **MCP (Model Context Protocol)** server, not Node.js `fs`:
+
 - Client spawned via stdio transport: `npx @modelcontextprotocol/server-filesystem`
 - Allowed paths configured at startup (e.g., `C:\\Users\\backtrack-testing`)
 - All file ops route through `MCPFilesystemClient` singleton
@@ -79,6 +88,7 @@ npm run build
 ## Routing System
 
 Uses **hash-based routing** (not React Router):
+
 ```typescript
 // App.tsx determines which page to render based on window.location.hash
 #/control-panel → MainControlPage
@@ -91,6 +101,7 @@ Each Electron window loads a different hash. Change routing logic in `src/render
 ## Gemini 3 API Integration (Pending)
 
 Placeholder response currently in `ChatDrawerPage.tsx:44-49`. Replace with:
+
 - API client in `src/main/services/`
 - IPC handler for `parse-intent`
 - Use `thinking_level: 'low'` for speed
@@ -101,6 +112,7 @@ Placeholder response currently in `ChatDrawerPage.tsx:44-49`. Replace with:
 **Commit messages**: Must be 3-5 words maximum (enforced by project rules).
 
 **Window creation**: All windows must have security config:
+
 ```typescript
 webPreferences: {
   contextIsolation: true,
@@ -139,15 +151,31 @@ src/
 
 ## Next Steps
 
-Current status: **Tasks 3-6 complete** (Floating Button, Chat Drawer UI, Message State Management).
+Current status: **Tasks 3-8 complete + Task 9 (folder scanning) partial**
 
 **Completed:**
+
 - ✅ Task 3: Floating button with system-wide overlay and animations
 - ✅ Task 4: Chat drawer with message bubbles, typing indicator, and input area
 - ✅ Task 5: Input area (implemented as part of Task 4)
 - ✅ Task 6: Conversation state management (Zustand conversationStore)
+- ✅ Task 7: Gemini 3 API integration for intent parsing
+- ✅ Task 8: Autocomplete for folder paths
+- ✅ Task 9 (partial): Folder scanning integration - MCP folder scanning works, handoff data prepared for F2
+
+**Completed:**
+
+- ✅ F1 Tasks 1-8: Electron setup, MCP, Gemini, UI, State Management, Autocomplete
+- ✅ F1 Task 9 (partial): Folder scanning integration
+- ✅ F2 COMPLETE: AI-Powered Planning Engine (3-stage pipeline)
+  - Task 1: Enhanced Gemini client with thinking levels
+  - Task 2: Stage 1 Draft Planning (low thinking, ~800ms)
+  - Task 3: Stage 2 Safety Verification (6 checks + AI, ~3s)
+  - Task 4: Stage 3 Undo Generation (deterministic + AI, ~2s)
+  - Task 5: Integration & Testing (IPC, stores, complete pipeline)
 
 **Next:**
-- Task 7: Gemini 3 API integration for intent parsing
-- Task 8: Autocomplete for folder paths
-- Task 9: End-to-end conversation flow
+
+- F3: Plan Preview & Confirmation UI
+- F4: Execution Engine (MCP operations)
+- F1 Task 9 (remaining): Clarification flow refinement

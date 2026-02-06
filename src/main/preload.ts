@@ -19,8 +19,12 @@ const api = {
   parseIntent: (message: string, context: string): Promise<IntentResult> =>
     ipcRenderer.invoke('parse-intent', message, context),
 
-  generateClarification: (intent: object): Promise<string> =>
+  generateClarification: (intent: object): Promise<ClarificationResult> =>
     ipcRenderer.invoke('generate-clarification', intent),
+
+  // Planning operations (F2)
+  generatePlan: (input: PlanningInput): Promise<PlanResult> =>
+    ipcRenderer.invoke('generate-plan', input),
 
   // Drawer control
   toggleDrawer: (): Promise<boolean> => ipcRenderer.invoke('toggle-drawer'),
@@ -74,6 +78,53 @@ interface IntentResult {
     conflicts: string[];
     clarityScore: number;
     needsClarification: boolean;
+  };
+  error?: string;
+}
+
+interface ClarificationResult {
+  success: boolean;
+  question?: string;
+  error?: string;
+}
+
+interface PlanningInput {
+  conversationId: string;
+  userIntent: string;
+  targetFolder: string;
+  constraints: string[];
+  scannedFiles: FileMetadata[];
+  parsedIntent: any;
+}
+
+interface PlanResult {
+  success: boolean;
+  plan?: {
+    plan_id: string;
+    actions: any[];
+    undo_plan: any;
+    safety_analysis: any;
+    summary: {
+      total_actions: number;
+      files_affected: number;
+      folders_created: number;
+    };
+    gemini_metadata: {
+      stage1_thinking_level: string;
+      stage1_signature: string;
+      stage1_latency_ms: number;
+      stage1_tokens: number;
+      stage2_thinking_level: string;
+      stage2_signature: string;
+      stage2_latency_ms: number;
+      stage2_tokens: number;
+      stage3_thinking_level: string;
+      stage3_signature: string;
+      stage3_latency_ms: number;
+      stage3_tokens: number;
+      total_time_ms: number;
+      total_tokens: number;
+    };
   };
   error?: string;
 }

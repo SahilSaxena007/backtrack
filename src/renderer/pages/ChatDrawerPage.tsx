@@ -139,19 +139,66 @@ export function ChatDrawerPage() {
           );
         }
       } else {
-        // Intent is clear! Show confirmation and prepare for next step (F2 Planning)
+        // Intent is clear! Show confirmation
         const confirmationMessage = `✓ Got it! I'll help you **${intent.action}** files in **${intent.target}** ${intent.method !== 'unknown' ? `**${intent.method.replace('_', ' ')}**` : ''}.
 
-${intent.constraints.length > 0 ? `\n📋 Constraints: ${intent.constraints.join(', ')}` : ''}
+${intent.constraints.length > 0 ? `📋 Constraints: ${intent.constraints.join(', ')}` : ''}
 
-Ready to scan the folder and generate a plan. (This will connect to F2 Planning in the next phase!)
-
-_Clarity Score: ${(intent.clarityScore * 100).toFixed(0)}%_`;
+Scanning folder...`;
 
         addAssistantMessage(confirmationMessage);
 
-        // TODO: Hand off to F2 Planning Engine
-        console.log('[ChatDrawer] Ready to hand off to F2 Planning:', intent);
+        // Resolve target folder to full path
+        // If target is just a folder name like "Downloads", map it to BASE_PATH\Downloads
+        const BASE_PATH = 'C:\\Users\\backtrack-testing';
+        let targetPath = intent.target;
+
+        // If target doesn't start with a drive letter or BASE_PATH, assume it's a subfolder
+        if (!targetPath.match(/^[A-Z]:\\/i) && !targetPath.startsWith(BASE_PATH)) {
+          targetPath = `${BASE_PATH}\\${targetPath}`;
+          console.log(`[ChatDrawer] Resolved "${intent.target}" to full path: ${targetPath}`);
+        }
+
+        // Scan the target folder
+        console.log(`[ChatDrawer] Scanning folder: ${targetPath}`);
+        const scanResult = await window.api.scanFolder(targetPath, true); // recursive scan
+
+        if (!scanResult.success) {
+          // Show error if scan fails
+          addAssistantMessage(
+            `❌ Couldn't access folder: ${scanResult.error}\n\nPlease check the path and try again.`
+          );
+          setLoading(false);
+          return;
+        }
+
+        const files = scanResult.files || [];
+        console.log(`[ChatDrawer] Scanned ${files.length} items`);
+
+        // Prepare F1 → F2 handoff data
+        const handoffData = {
+          conversationId: useConversationStore.getState().conversationId,
+          userIntent: trimmed,
+          targetFolder: targetPath, // Use resolved path, not intent.target
+          constraints: intent.constraints,
+          clarifications: [], // Will be populated if clarification flow is implemented
+          scannedFiles: files,
+          timestamp: new Date().toISOString(),
+          parsedIntent: intent,
+        };
+
+        // Store handoff data for F2 (will be used when F2 is implemented)
+        console.log('[ChatDrawer] F1 → F2 Handoff Data:', handoffData);
+        window.localStorage.setItem('f1-to-f2-handoff', JSON.stringify(handoffData));
+
+        // Show scan results
+        const scanSummary = `📁 Scanned **${files.length}** items in ${targetPath}
+
+Ready to generate a plan! (F2 Planning will take over from here)
+
+_Clarity Score: ${(intent.clarityScore * 100).toFixed(0)}%_`;
+
+        addAssistantMessage(scanSummary);
       }
 
       setLoading(false);
