@@ -54,6 +54,7 @@
 - F2 planning pipeline is complete (3 stages: draft, safety, undo).
 - F3 Visual Diff Preview is complete; Tasks 1-8 done (preview store, toast, glass panel, trees layout, recursive FolderTree, preview button, IPC wiring, polish).
 - F5 Transactional Execution: Hour 1 completed (deps installed, trace store, backup service).
+- F5 Hour 2-4 complete: ledger service, execution engine, progress overlay, IPC wiring; Hour 5 Task 9 initialized services in main.
 - Preview button label emphasized for clearer affordance.
 - Preview panel glassmorphism adjusted to match toast translucency; panel size reduced by 10%.
 
