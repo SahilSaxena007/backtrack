@@ -7,6 +7,7 @@
 
 import { useState } from 'react';
 import { usePreviewStore, PreviewMode } from '../store/previewStore';
+import { PreviewButton } from '../components/preview/PreviewButton';
 import type { F2_to_F3_Input } from '@shared/types';
 
 // Mock F2 output for testing
@@ -211,6 +212,7 @@ export function PreviewTestPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-8">
+      <PreviewButton />
       <div className="mx-auto max-w-4xl">
         {/* Header */}
         <div className="mb-8">

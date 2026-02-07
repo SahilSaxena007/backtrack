@@ -5,6 +5,7 @@ import { ChatDrawerPage } from './pages/ChatDrawerPage';
 import { PreviewTestPage } from './pages/PreviewTestPage';
 import { PreviewToast } from './components/preview/PreviewToast';
 import { PreviewPanel } from './components/preview/PreviewPanel';
+import { PreviewButton } from './components/preview/PreviewButton';
 import { usePreviewStore } from './store/previewStore';
 
 function App() {
@@ -47,6 +48,7 @@ function App() {
         <MainControlPage />
         <PreviewToast />
         <PreviewPanel />
+        <PreviewButton />
       </>
     );
   }
@@ -59,6 +61,7 @@ function App() {
         </div>
         <PreviewToast />
         <PreviewPanel />
+        <PreviewButton />
       </>
     );
   }
@@ -71,6 +74,7 @@ function App() {
         </div>
         <PreviewToast />
         <PreviewPanel />
+        <PreviewButton />
       </>
     );
   }
@@ -81,6 +85,7 @@ function App() {
         <PreviewTestPage />
         <PreviewToast />
         <PreviewPanel />
+        <PreviewButton />
       </>
     );
   }
@@ -93,6 +98,7 @@ function App() {
       </div>
       <PreviewToast />
       <PreviewPanel />
+      <PreviewButton />
     </>
   );
 }

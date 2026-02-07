@@ -236,21 +236,21 @@ export function PreviewPanel() {
     <AnimatePresence>
       {mode === 'panel' && plan && (
         <motion.div
-          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/80 backdrop-blur-md"
+          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={showButton}
         >
           <motion.div
-            className="flex h-[92vh] w-[95vw] max-w-[95vw] flex-col rounded-2xl border border-white/10 bg-[#080a0f] text-white shadow-[0_40px_120px_rgba(2,6,23,0.8)]"
+            className="flex h-[83vh] w-[86vw] max-w-[86vw] flex-col rounded-2xl border border-white/20 bg-white/10 text-white shadow-[0_40px_120px_rgba(2,6,23,0.6)] backdrop-blur-xl"
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.98 }}
             transition={{ type: 'spring', stiffness: 200, damping: 22 }}
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-white/10 px-6 py-3">
+            <div className="flex items-center justify-between border-b border-white/10 bg-white/10 px-6 py-3 backdrop-blur-xl">
               <div className="flex items-center gap-2 text-sm text-slate-300">
                 <span className="text-slate-400">Preview</span>
                 <ChevronRight className="h-4 w-4 text-slate-500" />
@@ -286,8 +286,8 @@ export function PreviewPanel() {
             </div>
 
             <div className="flex flex-1 flex-col gap-4 px-6 py-4">
-              <div className="grid flex-1 grid-cols-2 gap-4">
-                <div className="flex h-full flex-col rounded-2xl border border-white/10 bg-[#111318]/80 backdrop-blur">
+              <div className="grid flex-1 grid-cols-1 gap-4 lg:grid-cols-2">
+                <div className="flex min-h-0 flex-col rounded-2xl border border-white/10 bg-white/10 backdrop-blur-xl">
                   <div className="border-b border-white/5 px-4 py-3">
                     <p className="text-[11px] uppercase tracking-[0.3em] text-slate-500">Before</p>
                     <p className="text-xs text-slate-400">Current State</p>
@@ -301,7 +301,7 @@ export function PreviewPanel() {
                   </div>
                 </div>
 
-                <div className="relative flex h-full flex-col rounded-2xl border border-white/10 bg-[#111318]/80 backdrop-blur">
+                <div className="relative flex min-h-0 flex-col rounded-2xl border border-white/10 bg-white/10 backdrop-blur-xl">
                   <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-indigo-500/50 via-indigo-400/70 to-transparent" />
                   <div className="border-b border-white/5 px-4 py-3">
                     <p className="text-[11px] uppercase tracking-[0.3em] text-indigo-300">After</p>
@@ -318,8 +318,8 @@ export function PreviewPanel() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between border-t border-white/10 bg-[#080a0f] py-3">
-                <div className="flex flex-1 items-center">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 bg-white/10 py-3 backdrop-blur-xl">
+                <div className="flex flex-1 flex-wrap items-center gap-3">
                   {stats?.map((stat, index) => (
                     <div
                       key={stat.label}

@@ -178,6 +178,10 @@ Current status: **Tasks 3-8 complete + Task 9 (folder scanning) partial**
 - ✅ F3 Task 3: Glass preview panel
 - ✅ F3 Task 4: Before/after trees + summary dashboard
 - ✅ F3 Task 5: Recursive folder tree + badges
+- ✅ F3 Task 6: Floating preview button
+- ✅ F3 Task 7: Preview IPC handlers + preload wiring
+- ✅ F3 Task 8: Testing + visual polish
+- ✅ F3 UI polish: Preview button affordance emphasized
 
 **Next:**
 

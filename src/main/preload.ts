@@ -26,6 +26,14 @@ const api = {
   generatePlan: (input: PlanningInput): Promise<PlanResult> =>
     ipcRenderer.invoke('generate-plan', input),
 
+  // Preview operations (F3)
+  executePlan: (plan: PlanResult['plan']): Promise<PreviewActionResult> =>
+    ipcRenderer.invoke('execute-plan', plan),
+  requestPlanModification: (plan: PlanResult['plan']): Promise<PreviewActionResult> =>
+    ipcRenderer.invoke('request-plan-modification', plan),
+  cancelPlan: (): Promise<PreviewActionResult> =>
+    ipcRenderer.invoke('cancel-plan'),
+
   // Drawer control
   toggleDrawer: (): Promise<boolean> => ipcRenderer.invoke('toggle-drawer'),
   openDrawer: (): Promise<boolean> => ipcRenderer.invoke('open-drawer'),
@@ -127,6 +135,11 @@ interface PlanResult {
     };
   };
   error?: string;
+}
+
+interface PreviewActionResult {
+  success: boolean;
+  message: string;
 }
 
 // Expose the API to the renderer process

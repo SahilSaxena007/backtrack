@@ -136,37 +136,37 @@ F3 is the **trust-building layer** of Backtrack - it transforms abstract action 
 
 #### 6. Create Floating Preview Button
 
-- [ ] **File:** `src/renderer/components/preview/PreviewButton.tsx`
-- [ ] Implement:
-  - [ ] Compact floating button (top-right position)
-  - [ ] Mini stats display (file count + risk dot)
-  - [ ] Click handler to reopen panel
-  - [ ] Hover and tap animations (Framer Motion)
-  - [ ] Glass effect styling
+- [x] **File:** `src/renderer/components/preview/PreviewButton.tsx`
+- [x] Implement:
+  - [x] Compact floating button (top-right position)
+  - [x] Mini stats display (file count + risk dot)
+  - [x] Click handler to reopen panel
+  - [x] Hover and tap animations (Framer Motion)
+  - [x] Glass effect styling
 
 #### 7. Wire Up IPC Handlers
 
-- [ ] **File:** `src/main/ipc/preview-handlers.ts`
-- [ ] Register handlers for:
-  - [ ] `execute-plan` → triggers F5
-  - [ ] `request-plan-modification` → returns to F1
-  - [ ] `cancel-plan` → returns to F1
-- [ ] Update preload.ts with IPC methods
+- [x] **File:** `src/main/ipc/preview-handlers.ts`
+- [x] Register handlers for:
+  - [x] `execute-plan` → triggers F5
+  - [x] `request-plan-modification` → returns to F1
+  - [x] `cancel-plan` → returns to F1
+- [x] Update preload.ts with IPC methods
 
 #### 8. Testing & Polish
 
-- [ ] **Test all three stages**:
-  - [ ] Toast appearance and auto-hide
-  - [ ] Panel open/close (multiple methods)
-  - [ ] Button visibility and click
-  - [ ] Folder expand/collapse
-  - [ ] All action buttons
+- [x] **Test all three stages**:
+  - [x] Toast appearance and auto-hide
+  - [x] Panel open/close (multiple methods)
+  - [x] Button visibility and click
+  - [x] Folder expand/collapse
+  - [x] All action buttons
 
-- [ ] **Visual polish**:
-  - [ ] Glass effect in light and dark mode
-  - [ ] Animation smoothness
-  - [ ] Color contrast and readability
-  - [ ] Responsive behavior
+- [x] **Visual polish**:
+  - [x] Glass effect in light and dark mode
+  - [x] Animation smoothness
+  - [x] Color contrast and readability
+  - [x] Responsive behavior
 
 ---
 

@@ -52,7 +52,9 @@
 ## Current Status
 
 - F2 planning pipeline is complete (3 stages: draft, safety, undo).
-- F3 Visual Diff Preview is in progress; Tasks 1-5 are complete (preview store, toast, glass panel, trees layout, recursive FolderTree).
+- F3 Visual Diff Preview is complete; Tasks 1-8 done (preview store, toast, glass panel, trees layout, recursive FolderTree, preview button, IPC wiring, polish).
+- Preview button label emphasized for clearer affordance.
+- Preview panel glassmorphism adjusted to match toast translucency; panel size reduced by 10%.
 
 ## Agent Workflow Notes
 
