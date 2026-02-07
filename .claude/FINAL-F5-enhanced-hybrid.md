@@ -1049,6 +1049,10 @@ export interface ProgressUpdate {
 
 ### Hour 4: Progress UI + IPC Integration
 
+- [x] Task 6: Create Progress Overlay
+- [x] Task 7: Create Execution Store
+- [x] Task 8: Set Up IPC Handlers
+
 #### Task 6: Create Progress Overlay
 
 **File:** `src/renderer/components/execution/ProgressOverlay.tsx`

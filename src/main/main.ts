@@ -5,6 +5,7 @@ import { registerFilesystemHandlers } from './ipc/filesystem-handlers';
 import { registerGeminiHandlers } from './ipc/gemini-handlers';
 import { registerPlanningHandlers } from './ipc/planning-handlers';
 import { registerPreviewHandlers } from './ipc/preview-handlers';
+import { registerExecutionHandlers } from './ipc/execution-handlers';
 
 // Load environment variables from .env file
 dotenv.config();
@@ -160,6 +161,7 @@ function setupIPC(): void {
   registerGeminiHandlers(ipcMain);
   registerPlanningHandlers(ipcMain);
   registerPreviewHandlers(ipcMain);
+  registerExecutionHandlers(ipcMain);
 
   // Simple ping handler for testing IPC
   ipcMain.handle('ping', () => 'pong');

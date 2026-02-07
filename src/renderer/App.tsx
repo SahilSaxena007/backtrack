@@ -7,10 +7,13 @@ import { PreviewToast } from './components/preview/PreviewToast';
 import { PreviewPanel } from './components/preview/PreviewPanel';
 import { PreviewButton } from './components/preview/PreviewButton';
 import { usePreviewStore } from './store/previewStore';
+import { useExecutionStore } from './store/executionStore';
+import ProgressOverlay from './components/execution/ProgressOverlay';
 
 function App() {
   const [currentPage, setCurrentPage] = useState<string>('');
   const { showToast, plan } = usePreviewStore();
+  const updateExecution = useExecutionStore((s) => s.updateProgress);
 
   useEffect(() => {
     // Determine which page to show based on URL hash
@@ -41,6 +44,15 @@ function App() {
     };
   }, [plan, showToast]);
 
+  useEffect(() => {
+    const unsubscribe = window.api.onExecutionProgress((progress) => {
+      updateExecution(progress);
+    });
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [updateExecution]);
+
   // Route to the appropriate page
   if (currentPage === 'control-panel') {
     return (
@@ -49,6 +61,7 @@ function App() {
         <PreviewToast />
         <PreviewPanel />
         <PreviewButton />
+        <ProgressOverlay />
       </>
     );
   }
@@ -62,6 +75,7 @@ function App() {
         <PreviewToast />
         <PreviewPanel />
         <PreviewButton />
+        <ProgressOverlay />
       </>
     );
   }
@@ -75,6 +89,7 @@ function App() {
         <PreviewToast />
         <PreviewPanel />
         <PreviewButton />
+        <ProgressOverlay />
       </>
     );
   }
@@ -86,6 +101,7 @@ function App() {
         <PreviewToast />
         <PreviewPanel />
         <PreviewButton />
+        <ProgressOverlay />
       </>
     );
   }
@@ -99,6 +115,7 @@ function App() {
       <PreviewToast />
       <PreviewPanel />
       <PreviewButton />
+      <ProgressOverlay />
     </>
   );
 }

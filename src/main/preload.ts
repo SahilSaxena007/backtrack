@@ -34,6 +34,15 @@ const api = {
   cancelPlan: (): Promise<PreviewActionResult> =>
     ipcRenderer.invoke('cancel-plan'),
 
+  // Execution (F5)
+  runExecution: (approvedPlan: any) => ipcRenderer.invoke('execute-plan', approvedPlan),
+  getLatestExecution: () => ipcRenderer.invoke('get-latest-execution'),
+  onExecutionProgress: (callback: (progress: any) => void) => {
+    const handler = (_event: any, data: any) => callback(data);
+    ipcRenderer.on('execution-progress', handler);
+    return () => ipcRenderer.removeListener('execution-progress', handler);
+  },
+
   // Drawer control
   toggleDrawer: (): Promise<boolean> => ipcRenderer.invoke('toggle-drawer'),
   openDrawer: (): Promise<boolean> => ipcRenderer.invoke('open-drawer'),
