@@ -53,6 +53,7 @@
 
 - F2 planning pipeline is complete (3 stages: draft, safety, undo).
 - F3 Visual Diff Preview is complete; Tasks 1-8 done (preview store, toast, glass panel, trees layout, recursive FolderTree, preview button, IPC wiring, polish).
+- F5 Transactional Execution: Hour 1 completed (deps installed, trace store, backup service).
 - Preview button label emphasized for clearer affordance.
 - Preview panel glassmorphism adjusted to match toast translucency; panel size reduced by 10%.
 
@@ -62,7 +63,7 @@
 - Do not use `.claude/progress.md` for context; only update it when tasks complete.
 - After completing a task, update `.claude/implementation-plan-F1.md` or `.claude/implementation-plan-F2.md` and update `CLAUDE.md`.
 - Update `AGENTS.md` at the start of a new chat or after task updates; this file is the running summary.
-- **Update `.claude/implementation-plan-F1.md` or `.claude/implementation-plan-F2.md` checklist tasks or `.claude/implementation-plan-F3.md`** after completing each task implementation. Mark all subtasks as `[x]` and note what was accomplished.
+- **Update `.claude/implementation-plan-F1.md` or `.claude/implementation-plan-F2.md` checklist tasks or `.claude/implementation-plan-F3.md` or `.claude/FINAL-F5-enhanced-hybrid.md`** after completing each task implementation. Mark all subtasks as `[x]` and note what was accomplished.
 
 ## Common Development Gotchas
 

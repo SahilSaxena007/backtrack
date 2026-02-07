@@ -32,10 +32,12 @@
   "dependencies": {
     "@google/generative-ai": "^0.21.0",
     "@modelcontextprotocol/sdk": "^1.0.0",
+    "@types/fs-extra": "^11.0.4",
     "chokidar": "^3.5.0",
     "dotenv": "^17.2.4",
     "electron-store": "^8.2.0",
     "framer-motion": "^10.16.0",
+    "fs-extra": "^11.3.3",
     "fuse.js": "^7.0.0",
     "lucide-react": "^0.300.0",
     "react": "^18.2.0",
