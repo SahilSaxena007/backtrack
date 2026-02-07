@@ -438,6 +438,9 @@ export interface BackupMetadata {
 
 ### Hour 2: Ledger Service + Execution Context
 
+- [x] Task 4: Create Ledger Service
+- [x] Task 5: Create Execution Engine
+
 #### Task 4: Create Ledger Service
 
 **File:** `src/main/services/ledger-service.ts`
