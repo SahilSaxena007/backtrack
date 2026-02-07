@@ -58,6 +58,90 @@ export interface Conversation {
   updatedAt: Date;
 }
 
+// F2 to F3 handoff types (visual preview)
+export type RiskLevel = 'safe' | 'low' | 'medium' | 'high' | 'critical';
+
+export interface Action {
+  id: string;
+  type: string;
+  params: Record<string, any>;
+  description: string;
+  depends_on: string[];
+  estimated_time_ms: number;
+}
+
+export interface SafetyCheck {
+  passed: boolean;
+  issue?: string;
+  severity?: RiskLevel;
+}
+
+export interface SafetyReport {
+  overall_risk: RiskLevel;
+  is_safe: boolean;
+  issues: Array<{
+    type: string;
+    severity: RiskLevel;
+    description: string;
+    affected_actions: string[];
+  }>;
+  checks: {
+    data_loss_risk: SafetyCheck;
+    permission_issues: SafetyCheck;
+    file_conflicts: SafetyCheck;
+    circular_dependencies: SafetyCheck;
+    disk_space: SafetyCheck;
+    protected_paths: SafetyCheck;
+  };
+  ai_analysis?: string;
+}
+
+export interface UndoPlan {
+  undo_plan_id: string;
+  original_plan_id: string;
+  undo_actions: Action[];
+  checkpoint: {
+    checkpoint_id: string;
+    plan_id: string;
+    timestamp: string;
+    target_folder: string;
+    file_snapshot: Array<{
+      path: string;
+      size: number;
+      modified: string;
+    }>;
+  };
+  deterministic: boolean;
+}
+
+export interface F2_to_F3_Input {
+  plan_id: string;
+  actions: Action[];
+  undo_plan: UndoPlan;
+  safety_analysis: SafetyReport;
+  summary: {
+    total_actions: number;
+    files_affected: number;
+    folders_created: number;
+  };
+  gemini_metadata: {
+    stage1_thinking_level: 'low';
+    stage1_signature: string;
+    stage1_latency_ms: number;
+    stage1_tokens: number;
+    stage2_thinking_level: 'high';
+    stage2_signature: string;
+    stage2_latency_ms: number;
+    stage2_tokens: number;
+    stage3_thinking_level: 'high';
+    stage3_signature: string;
+    stage3_latency_ms: number;
+    stage3_tokens: number;
+    total_time_ms: number;
+    total_tokens: number;
+  };
+}
+
 // F1 to F2 handoff interface
 export interface F1_to_F2_Handoff {
   conversationId: string;

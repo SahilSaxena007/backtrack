@@ -54,14 +54,14 @@ F3 is the **trust-building layer** of Backtrack - it transforms abstract action 
 
 #### 1. Install Dependencies & Create Preview Store
 
-- [ ] **Install Framer Motion**
+- [x] **Install Framer Motion**
   ```bash
   npm install framer-motion
   ```
 
-- [ ] **Create Preview Store**
-  - [ ] File: `src/renderer/store/previewStore.ts`
-  - [ ] Define interfaces:
+- [x] **Create Preview Store**
+  - [x] File: `src/renderer/store/previewStore.ts`
+  - [x] Define interfaces:
     ```typescript
     type PreviewMode = 'toast' | 'panel' | 'button' | 'hidden';
     
@@ -79,58 +79,58 @@ F3 is the **trust-building layer** of Backtrack - it transforms abstract action 
       cancelPlan: () => void;
     }
     ```
-  - [ ] Implement Zustand store with 8-second auto-hide timer
-  - [ ] Add IPC calls for approve/modify/cancel actions
+  - [x] Implement Zustand store with 8-second auto-hide timer
+  - [x] Add IPC calls for approve/modify/cancel actions
 
 #### 2. Create Toast Notification Component
 
-- [ ] **File:** `src/renderer/components/preview/PreviewToast.tsx`
-- [ ] Implement with:
-  - [ ] Framer Motion slide-in animation from right
-  - [ ] Glass effect styling (backdrop-blur-[30px])
-  - [ ] Stats display (files, folders, duration, risk)
-  - [ ] Two buttons: "View Full Preview" and "Approve & Execute"
-  - [ ] Auto-hide behavior (8 seconds)
-  - [ ] Risk level color coding (green/yellow/red)
+- [x] **File:** `src/renderer/components/preview/PreviewToast.tsx`
+- [x] Implement with:
+  - [x] Framer Motion slide-in animation from right
+  - [x] Glass effect styling (backdrop-blur-[30px])
+  - [x] Stats display (files, folders, duration, risk)
+  - [x] Two buttons: "View Full Preview" and "Approve & Execute"
+  - [x] Auto-hide behavior (8 seconds)
+  - [x] Risk level color coding (green/yellow/red)
 
 ### Hour 2: Full Preview Panel
 
 #### 3. Create Glass Panel Component
 
-- [ ] **File:** `src/renderer/components/preview/PreviewPanel.tsx`
-- [ ] Implement:
-  - [ ] Backdrop overlay (blur + semi-transparent)
-  - [ ] Glass panel container (70% width, 75% height, centered)
-  - [ ] Cluely-style glass effect (backdrop-blur-[40px], saturate-[200%])
-  - [ ] Header with title and close button
-  - [ ] Close handlers (X button, Escape key, backdrop click)
-  - [ ] Scale + fade animation (Framer Motion)
+- [x] **File:** `src/renderer/components/preview/PreviewPanel.tsx`
+- [x] Implement:
+  - [x] Backdrop overlay (blur + semi-transparent)
+  - [x] Glass panel container (70% width, 75% height, centered)
+  - [x] Cluely-style glass effect (backdrop-blur-[40px], saturate-[200%])
+  - [x] Header with title and close button
+  - [x] Close handlers (X button, Escape key, backdrop click)
+  - [x] Scale + fade animation (Framer Motion)
 
 #### 4. Add Before/After Trees & Summary
 
-- [ ] **Create two-column layout** for Before/After trees
-- [ ] **Create Summary Dashboard** with:
-  - [ ] 4 stat cards (files, folders, time, risk)
-  - [ ] Undo guarantee message
-  - [ ] Grid layout
-- [ ] **Add Action Buttons**:
-  - [ ] Cancel (secondary)
-  - [ ] Modify Plan (secondary)
-  - [ ] Approve & Execute (primary, highlighted)
+- [x] **Create two-column layout** for Before/After trees
+- [x] **Create Summary Dashboard** with:
+  - [x] 4 stat cards (files, folders, time, risk)
+  - [x] Undo guarantee message
+  - [x] Grid layout
+- [x] **Add Action Buttons**:
+  - [x] Cancel (secondary)
+  - [x] Modify Plan (secondary)
+  - [x] Approve & Execute (primary, highlighted)
 
 ### Hour 3: Folder Tree Component
 
 #### 5. Build Recursive Tree Component
 
-- [ ] **File:** `src/renderer/components/preview/FolderTree.tsx`
-- [ ] Implement:
-  - [ ] Recursive rendering of folders and files
-  - [ ] Expand/collapse functionality (click toggle)
-  - [ ] Indentation based on depth level
-  - [ ] File icons based on extension
-  - [ ] Badge display for "After" tree (NEW, MOVED, RENAMED, TEMP)
-  - [ ] Hover effects
-  - [ ] Smooth expand/collapse animations
+- [x] **File:** `src/renderer/components/preview/FolderTree.tsx`
+- [x] Implement:
+  - [x] Recursive rendering of folders and files
+  - [x] Expand/collapse functionality (click toggle)
+  - [x] Indentation based on depth level
+  - [x] File icons based on extension
+  - [x] Badge display for "After" tree (NEW, MOVED, RENAMED, TEMP)
+  - [x] Hover effects
+  - [x] Smooth expand/collapse animations
 
 ### Hour 4: Floating Button + Integration
 

@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **DO NOT use `.claude/progress.md` as a reference file.** Only update it to mark completed tasks. Use CLAUDE.md and implementation plans for context.
 
-**Update `.claude/implementation-plan-F1.md` or `.claude/implementation-plan-F2.md` checklist tasks** after completing each task implementation. Mark all subtasks as `[x]` and note what was accomplished.
+**Update `.claude/implementation-plan-F1.md` or `.claude/implementation-plan-F2.md` checklist tasks or `.claude/implementation-plan-F3.md`** after completing each task implementation. Mark all subtasks as `[x]` and note what was accomplished.
 
 **Update `CLAUDE.md` after completing each task**
 
@@ -173,6 +173,11 @@ Current status: **Tasks 3-8 complete + Task 9 (folder scanning) partial**
   - Task 3: Stage 2 Safety Verification (6 checks + AI, ~3s)
   - Task 4: Stage 3 Undo Generation (deterministic + AI, ~2s)
   - Task 5: Integration & Testing (IPC, stores, complete pipeline)
+- ✅ F3 Task 1: Preview store + F2→F3 shared types
+- ✅ F3 Task 2: Preview toast component
+- ✅ F3 Task 3: Glass preview panel
+- ✅ F3 Task 4: Before/after trees + summary dashboard
+- ✅ F3 Task 5: Recursive folder tree + badges
 
 **Next:**
 
