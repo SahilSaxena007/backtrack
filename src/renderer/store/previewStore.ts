@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { F2_to_F3_Input } from '@shared/types';
+import { useExecutionStore } from './executionStore';
 
 export type PreviewMode = 'toast' | 'panel' | 'button' | 'hidden';
 
@@ -78,8 +79,27 @@ export const usePreviewStore = create<PreviewStore>((set, get) => ({
 
   approvePlan: () => {
     const api = (window as any)?.api;
-    if (api?.executePlan && get().plan) {
-      void api.executePlan(get().plan);
+    const plan = get().plan;
+    if (api?.runExecution && plan) {
+      // Map F3 plan to execution-approved shape
+      const approvedPlan = {
+        plan_id: plan.plan_id,
+        user_intent: (plan as any).user_intent || 'unknown',
+        conversation_id: (plan as any).conversation_id || '',
+        target_folder: (plan as any).target_folder || '',
+        actions: plan.actions,
+        summary: plan.summary,
+        gemini_prompt: (plan as any).gemini_prompt,
+        gemini_response: (plan as any).gemini_response,
+        thinking_signatures: (plan as any).thinking_signatures,
+      };
+      // Optimistically set preparing state
+      useExecutionStore.getState().updateProgress({
+        status: 'preparing',
+        progress: 0,
+        message: 'Starting execution...',
+      });
+      void api.runExecution(approvedPlan);
     }
     set({ mode: 'hidden' });
   },

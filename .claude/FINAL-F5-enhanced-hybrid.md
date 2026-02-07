@@ -1259,6 +1259,10 @@ contextBridge.exposeInMainWorld('api', {
 
 ### Hour 5: Initialize Services + Testing
 
+- [x] Task 9: Initialize All Services (main process)
+- [x] Task 10: Connect Execution Store to IPC (renderer)
+- [x] Task 11: Update F3 to Trigger F5
+
 #### Task 9: Initialize All Services
 
 **File:** `src/main/index.ts` (main process entry)
