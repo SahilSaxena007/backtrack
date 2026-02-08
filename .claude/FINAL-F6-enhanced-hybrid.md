@@ -76,6 +76,10 @@ src/
 
 ### Hour 1: Undo Button + State Management
 
+- [x] Task 1: Create Undo Store
+- [x] Task 2: Create Undo Button
+- [x] Task 3: Create Confirmation Modal
+
 #### Task 1: Create Undo Store
 
 **File:** `src/renderer/store/undoStore.ts`
@@ -288,6 +292,9 @@ export default function UndoConfirmation({ onClose }: Props) {
 ---
 
 ### Hour 2: Modification Detection + Warning Modal
+
+- [x] Task 4: Create Modification Detector
+- [x] Task 5: Create Modification Warning Modal
 
 #### Task 4: Create Modification Detector
 
