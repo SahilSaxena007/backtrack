@@ -49,13 +49,12 @@ export class GeminiClient {
 
     this.client = new GoogleGenerativeAI(apiKey);
 
-    // Use Gemini 2.5 Flash for accurate and fast intent parsing
-    // Best balance of accuracy and speed for real-time UX
+    // Use Gemini 3 Pro for higher-quality reasoning
     this.model = this.client.getGenerativeModel({
-      model: 'gemini-2.5-flash'
+      model: 'gemini-3-pro'
     });
 
-    console.log('[Gemini] Client initialized with model: gemini-2.5-flash');
+    console.log('[Gemini] Client initialized with model: gemini-3-pro');
   }
 
   /**

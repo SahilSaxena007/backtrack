@@ -27,8 +27,6 @@ const api = {
     ipcRenderer.invoke('generate-plan', input),
 
   // Preview operations (F3)
-  executePlan: (plan: PlanResult['plan']): Promise<PreviewActionResult> =>
-    ipcRenderer.invoke('execute-plan', plan),
   requestPlanModification: (plan: PlanResult['plan']): Promise<PreviewActionResult> =>
     ipcRenderer.invoke('request-plan-modification', plan),
   cancelPlan: (): Promise<PreviewActionResult> =>
@@ -36,6 +34,7 @@ const api = {
 
   // Execution (F5)
   runExecution: (approvedPlan: any) => ipcRenderer.invoke('execute-plan', approvedPlan),
+  runDemoExecution: () => ipcRenderer.invoke('run-demo-execution'),
   getLatestExecution: () => ipcRenderer.invoke('get-latest-execution'),
   onExecutionProgress: (callback: (progress: any) => void) => {
     const handler = (_event: any, data: any) => callback(data);

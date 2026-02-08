@@ -45,6 +45,9 @@ function App() {
   }, [plan, showToast]);
 
   useEffect(() => {
+    if (!window.api?.onExecutionProgress) {
+      return;
+    }
     const unsubscribe = window.api.onExecutionProgress((progress) => {
       updateExecution(progress);
     });

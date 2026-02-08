@@ -16,6 +16,10 @@ export class ExecutionEngine {
     private mainWindow: BrowserWindow
   ) {}
 
+  getLedgerService(): LedgerService {
+    return this.ledgerService;
+  }
+
   async executePlan(approvedPlan: ApprovedPlan): Promise<ExecutionResult> {
     let executionId: string | null = null;
     let checkpoint: BackupMetadata | null = null;
@@ -124,11 +128,12 @@ export class ExecutionEngine {
         break;
       }
       case 'move_files_batch': {
-        const { files, source_folder, destination } = action.params;
+        const { files, source_folder, source, destination } = action.params;
+        const sourceRoot = source_folder || source;
         for (const file of files) {
-          const source = path.join(source_folder, file);
+          const sourcePath = path.join(sourceRoot, file);
           const dest = path.join(destination, file);
-          await this.mcpClient.callTool('move_file', { source, destination: dest });
+          await this.mcpClient.callTool('move_file', { source: sourcePath, destination: dest });
         }
         break;
       }

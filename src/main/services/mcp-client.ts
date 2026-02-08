@@ -188,6 +188,45 @@ export class MCPFilesystemClient {
   }
 
   /**
+   * Generic MCP tool call (used by execution engine)
+   */
+  async callTool(name: string, args: Record<string, any>): Promise<any> {
+    if (!this.isConnected || !this.client) {
+      throw new Error('MCP client not connected');
+    }
+    return this.client.callTool({
+      name,
+      arguments: args
+    });
+  }
+
+  /**
+   * Check whether a path exists (file or directory)
+   */
+  async pathExists(pathToCheck: string): Promise<boolean> {
+    if (!this.isConnected || !this.client) {
+      throw new Error('MCP client not connected');
+    }
+    try {
+      await this.client.callTool({
+        name: 'read_file',
+        arguments: { path: pathToCheck }
+      });
+      return true;
+    } catch {
+      try {
+        await this.client.callTool({
+          name: 'read_directory',
+          arguments: { path: pathToCheck }
+        });
+        return true;
+      } catch {
+        return false;
+      }
+    }
+  }
+
+  /**
    * Check connection status
    */
   isClientConnected(): boolean {

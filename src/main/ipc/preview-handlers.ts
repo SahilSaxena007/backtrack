@@ -7,12 +7,6 @@ interface PreviewActionResult {
 }
 
 export function registerPreviewHandlers(ipcMain: IpcMain): void {
-  ipcMain.handle('execute-plan', async (_event, plan: F2_to_F3_Input): Promise<PreviewActionResult> => {
-    console.log('[IPC] execute-plan called', plan?.plan_id);
-    // TODO: Wire to F5 execution engine
-    return { success: true, message: 'Execution queued (stub)' };
-  });
-
   ipcMain.handle('request-plan-modification', async (_event, plan: F2_to_F3_Input): Promise<PreviewActionResult> => {
     console.log('[IPC] request-plan-modification called', plan?.plan_id);
     // TODO: Return to F1 clarification flow

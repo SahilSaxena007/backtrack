@@ -6,6 +6,11 @@ import { registerGeminiHandlers } from './ipc/gemini-handlers';
 import { registerPlanningHandlers } from './ipc/planning-handlers';
 import { registerPreviewHandlers } from './ipc/preview-handlers';
 import { registerExecutionHandlers } from './ipc/execution-handlers';
+import { TraceStore } from './services/trace-store';
+import { BackupService } from './services/backup-service';
+import { LedgerService } from './services/ledger-service';
+import { ExecutionEngine } from './services/execution-engine';
+import { getMCPClient } from './services/mcp-client';
 
 // Load environment variables from .env file
 dotenv.config();
@@ -13,6 +18,7 @@ dotenv.config();
 let mainControlWindow: BrowserWindow | null = null;
 let floatingButtonWindow: BrowserWindow | null = null;
 let chatDrawerWindow: BrowserWindow | null = null;
+export let executionEngine: ExecutionEngine;
 
 const isDev = !app.isPackaged;
 
@@ -161,7 +167,7 @@ function setupIPC(): void {
   registerGeminiHandlers(ipcMain);
   registerPlanningHandlers(ipcMain);
   registerPreviewHandlers(ipcMain);
-  registerExecutionHandlers(ipcMain);
+  registerExecutionHandlers();
 
   // Simple ping handler for testing IPC
   ipcMain.handle('ping', () => 'pong');
@@ -241,9 +247,10 @@ function setupIPC(): void {
 }
 
 // App lifecycle
-app.whenReady().then(() => {
-  setupIPC();
+app.whenReady().then(async () => {
   createMainControlWindow();
+  await initializeExecutionEngine();
+  setupIPC();
 
   app.on('activate', () => {
     if (!mainControlWindow) {
@@ -257,6 +264,32 @@ app.on('window-all-closed', () => {
     app.quit();
   }
 });
+
+async function initializeExecutionEngine() {
+  const traceStore = new TraceStore();
+  await traceStore.initialize();
+
+  const backupService = new BackupService();
+  await backupService.initialize();
+
+  const ledgerService = new LedgerService();
+  await ledgerService.initialize();
+
+  const basePath = process.env.BASE_PATH || 'C:\\Users\\backtrack-testing';
+  const mcpClient = await getMCPClient([basePath]);
+
+  if (!mainControlWindow) {
+    throw new Error('Main window not initialized');
+  }
+
+  executionEngine = new ExecutionEngine(
+    traceStore,
+    backupService,
+    ledgerService,
+    mcpClient,
+    mainControlWindow
+  );
+}
 
 // Security: Prevent new window creation
 app.on('web-contents-created', (_, contents) => {

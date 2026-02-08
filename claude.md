@@ -182,6 +182,12 @@ Current status: **Tasks 3-8 complete + Task 9 (folder scanning) partial**
 - ✅ F3 Task 7: Preview IPC handlers + preload wiring
 - ✅ F3 Task 8: Testing + visual polish
 - ✅ F3 UI polish: Preview button affordance emphasized
+- ✅ F5 Hour 1: deps installed, trace store, backup service
+- ✅ F5 Hour 2-3: ledger service + execution engine
+- ✅ F5 Hour 4: progress overlay + IPC wiring
+- ✅ F5 Hour 5 Task 9: service initialization in main
+- ✅ F5 Hour 5 Tasks 10-11: renderer execution wiring + F3 triggers F5
+- ✅ F5 Demo: preview test page triggers execution via BASE_PATH
 
 **Next:**
 

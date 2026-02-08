@@ -301,6 +301,12 @@ export function PreviewTestPage() {
                 >
                   Hide All
                 </button>
+                <button
+                  onClick={() => window.api.runDemoExecution?.()}
+                  className="col-span-2 px-4 py-2 rounded-lg bg-emerald-500 text-white font-semibold hover:bg-emerald-600 transition"
+                >
+                  Run F5 Demo Execution
+                </button>
               </div>
             </div>
 
@@ -309,6 +315,12 @@ export function PreviewTestPage() {
               <p className="text-xs text-blue-200">
                 <strong>💡 Tip:</strong> Click "Show Toast" to trigger the 8-second auto-hide timer.
                 The toast will automatically become a button after hiding.
+              </p>
+            </div>
+            <div className="rounded-lg bg-emerald-500/10 border border-emerald-400/30 p-3">
+              <p className="text-xs text-emerald-200">
+                <strong>Demo:</strong> "Run F5 Demo Execution" creates a new folder inside your
+                `BASE_PATH` via the execution engine.
               </p>
             </div>
           </div>
