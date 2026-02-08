@@ -9,6 +9,8 @@ import { PreviewButton } from './components/preview/PreviewButton';
 import { usePreviewStore } from './store/previewStore';
 import { useExecutionStore } from './store/executionStore';
 import ProgressOverlay from './components/execution/ProgressOverlay';
+import UndoButton from './components/undo/UndoButton';
+import UndoProgress from './components/undo/UndoProgress';
 
 function App() {
   const [currentPage, setCurrentPage] = useState<string>('');
@@ -65,6 +67,8 @@ function App() {
         <PreviewPanel />
         <PreviewButton />
         <ProgressOverlay />
+        <UndoButton />
+        <UndoProgress />
       </>
     );
   }
@@ -79,6 +83,8 @@ function App() {
         <PreviewPanel />
         <PreviewButton />
         <ProgressOverlay />
+        <UndoButton />
+        <UndoProgress />
       </>
     );
   }
@@ -93,6 +99,8 @@ function App() {
         <PreviewPanel />
         <PreviewButton />
         <ProgressOverlay />
+        <UndoButton />
+        <UndoProgress />
       </>
     );
   }
@@ -105,6 +113,8 @@ function App() {
         <PreviewPanel />
         <PreviewButton />
         <ProgressOverlay />
+        <UndoButton />
+        <UndoProgress />
       </>
     );
   }
@@ -119,6 +129,8 @@ function App() {
       <PreviewPanel />
       <PreviewButton />
       <ProgressOverlay />
+      <UndoButton />
+      <UndoProgress />
     </>
   );
 }

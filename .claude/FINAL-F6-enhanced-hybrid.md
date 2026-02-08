@@ -490,6 +490,8 @@ interface FileModification {
 
 ### Hour 3: Undo Engine (Inverse + Fallback)
 
+- [x] Task 6: Create Undo Engine
+
 #### Task 6: Create Undo Engine
 
 **File:** `src/main/services/undo-engine.ts`
@@ -755,6 +757,11 @@ export interface UndoProgress {
 
 ### Hour 4: Progress UI + IPC + Integration
 
+- [x] Task 7: Create Undo Progress Overlay
+- [x] Task 8: Set Up IPC Handlers
+- [ ] Task 9: Initialize Undo Engine
+- [ ] Task 10: Connect Undo Button to F5 Success
+- [ ] Task 11: Add All Components to App
 #### Task 7: Create Undo Progress Overlay
 
 **File:** `src/renderer/components/undo/UndoProgress.tsx`

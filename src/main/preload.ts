@@ -42,6 +42,16 @@ const api = {
     return () => ipcRenderer.removeListener('execution-progress', handler);
   },
 
+  // Undo (F6)
+  executeUndo: (executionId: string) => ipcRenderer.invoke('execute-undo', executionId),
+  onUndoProgress: (callback: (progress: any) => void) => {
+    const handler = (_event: any, data: any) => callback(data);
+    ipcRenderer.on('undo-progress', handler);
+    return () => ipcRenderer.removeListener('undo-progress', handler);
+  },
+  sendModificationDecision: (decision: boolean) =>
+    ipcRenderer.send('modification-decision', decision),
+
   // Drawer control
   toggleDrawer: (): Promise<boolean> => ipcRenderer.invoke('toggle-drawer'),
   openDrawer: (): Promise<boolean> => ipcRenderer.invoke('open-drawer'),
