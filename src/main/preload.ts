@@ -51,6 +51,11 @@ const api = {
   },
   sendModificationDecision: (decision: boolean) =>
     ipcRenderer.send('modification-decision', decision),
+  onModificationWarning: (callback: (mods: any) => void) => {
+    const handler = (_event: any, data: any) => callback(data);
+    ipcRenderer.on('modification-warning', handler);
+    return () => ipcRenderer.removeListener('modification-warning', handler);
+  },
 
   // Drawer control
   toggleDrawer: (): Promise<boolean> => ipcRenderer.invoke('toggle-drawer'),

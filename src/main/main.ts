@@ -6,10 +6,13 @@ import { registerGeminiHandlers } from './ipc/gemini-handlers';
 import { registerPlanningHandlers } from './ipc/planning-handlers';
 import { registerPreviewHandlers } from './ipc/preview-handlers';
 import { registerExecutionHandlers } from './ipc/execution-handlers';
+import { registerUndoHandlers } from './ipc/undo-handlers';
 import { TraceStore } from './services/trace-store';
 import { BackupService } from './services/backup-service';
 import { LedgerService } from './services/ledger-service';
 import { ExecutionEngine } from './services/execution-engine';
+import { UndoEngine } from './services/undo-engine';
+import { ModificationDetector } from './services/modification-detector';
 import { getMCPClient } from './services/mcp-client';
 
 // Load environment variables from .env file
@@ -19,6 +22,7 @@ let mainControlWindow: BrowserWindow | null = null;
 let floatingButtonWindow: BrowserWindow | null = null;
 let chatDrawerWindow: BrowserWindow | null = null;
 export let executionEngine: ExecutionEngine;
+export let undoEngine: UndoEngine;
 
 const isDev = !app.isPackaged;
 
@@ -168,6 +172,7 @@ function setupIPC(): void {
   registerPlanningHandlers(ipcMain);
   registerPreviewHandlers(ipcMain);
   registerExecutionHandlers();
+  registerUndoHandlers();
 
   // Simple ping handler for testing IPC
   ipcMain.handle('ping', () => 'pong');
@@ -286,6 +291,16 @@ async function initializeExecutionEngine() {
     traceStore,
     backupService,
     ledgerService,
+    mcpClient,
+    mainControlWindow
+  );
+
+  const modificationDetector = new ModificationDetector();
+  undoEngine = new UndoEngine(
+    ledgerService,
+    backupService,
+    traceStore,
+    modificationDetector,
     mcpClient,
     mainControlWindow
   );

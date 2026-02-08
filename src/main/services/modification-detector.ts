@@ -2,12 +2,8 @@ import fs from 'fs-extra';
 import path from 'path';
 import crypto from 'crypto';
 import { BackupMetadata } from './backup-service';
+import { FileModification } from '../../shared/types';
 
-export interface FileModification {
-  path: string;
-  type: 'modified' | 'deleted' | 'added';
-  message: string;
-}
 
 /**
  * Detects user modifications between backup and current folder.

@@ -8,14 +8,19 @@ import { PreviewPanel } from './components/preview/PreviewPanel';
 import { PreviewButton } from './components/preview/PreviewButton';
 import { usePreviewStore } from './store/previewStore';
 import { useExecutionStore } from './store/executionStore';
+import { useUndoStore } from './store/undoStore';
+import type { FileModification } from '@shared/types';
 import ProgressOverlay from './components/execution/ProgressOverlay';
 import UndoButton from './components/undo/UndoButton';
 import UndoProgress from './components/undo/UndoProgress';
+import ModificationWarning from './components/undo/ModificationWarning';
 
 function App() {
   const [currentPage, setCurrentPage] = useState<string>('');
+  const [modifications, setModifications] = useState<FileModification[] | null>(null);
   const { showToast, plan } = usePreviewStore();
   const updateExecution = useExecutionStore((s) => s.updateProgress);
+  const enableUndo = useUndoStore((s) => s.enableUndo);
 
   useEffect(() => {
     // Determine which page to show based on URL hash
@@ -52,11 +57,32 @@ function App() {
     }
     const unsubscribe = window.api.onExecutionProgress((progress) => {
       updateExecution(progress);
+      if (progress?.status === 'success' && window.api?.getLatestExecution) {
+        window.api.getLatestExecution().then((res: any) => {
+          if (res?.success && res.execution) {
+            enableUndo({
+              execution_id: res.execution.execution_id,
+              description: res.execution.description || 'File organization',
+              completed_at: res.execution.completed_at || new Date().toISOString(),
+            });
+          }
+        });
+      }
     });
     return () => {
       if (unsubscribe) unsubscribe();
     };
-  }, [updateExecution]);
+  }, [updateExecution, enableUndo]);
+
+  useEffect(() => {
+    if (!window.api?.onModificationWarning) return;
+    const unsub = window.api.onModificationWarning((mods: FileModification[]) => {
+      setModifications(mods);
+    });
+    return () => {
+      if (unsub) unsub();
+    };
+  }, []);
 
   // Route to the appropriate page
   if (currentPage === 'control-panel') {
@@ -131,6 +157,26 @@ function App() {
       <ProgressOverlay />
       <UndoButton />
       <UndoProgress />
+      {modifications && (
+        <ModificationWarning
+          modifications={modifications}
+          onCancel={() => {
+            window.api.sendModificationDecision(false);
+            setModifications(null);
+          }}
+          onUndoAnyway={() => {
+            window.api.sendModificationDecision(true);
+            setModifications(null);
+          }}
+          onViewDetails={() => {
+            alert(
+              modifications
+                .map((m) => `${m.type.toUpperCase()}: ${m.path} (${m.message})`)
+                .join('\n')
+            );
+          }}
+        />
+      )}
     </>
   );
 }

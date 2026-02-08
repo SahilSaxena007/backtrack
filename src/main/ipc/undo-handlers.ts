@@ -12,7 +12,6 @@ export function registerUndoHandlers(): void {
   });
 
   ipcMain.on('modification-decision', (_event, decision: boolean) => {
-    // Relay back to the waiting promise in undo-engine
-    ipcMain.emit('modification-decision', decision);
+    undoEngine.resolveModificationDecision(decision);
   });
 }
