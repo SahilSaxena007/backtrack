@@ -155,3 +155,10 @@ export interface F1_to_F2_Handoff {
   scannedFiles: FileMetadata[];
   timestamp: string;
 }
+
+// Undo / modification detection
+export interface FileModification {
+  path: string;
+  type: 'modified' | 'deleted' | 'added';
+  message: string;
+}

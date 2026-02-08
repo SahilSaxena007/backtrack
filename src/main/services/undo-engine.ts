@@ -17,10 +17,13 @@ export class UndoEngine {
     private mcpClient: MCPClient,
     private mainWindow: BrowserWindow
   ) {}
+  private modificationResolver: ((decision: boolean) => void) | null = null;
 
   async executeUndo(executionId: string): Promise<UndoResult> {
     try {
       const execution = await this.ledgerService.getExecution(executionId);
+      // Load trace for context (and to avoid unused property)
+      await this.traceStore.getTrace(execution.trace_id).catch(() => null);
       const backupMetadata = await this.backupService.getBackupMetadata(execution.checkpoint_id);
       if (!backupMetadata) throw new Error('Backup not found');
 
@@ -142,11 +145,15 @@ export class UndoEngine {
   private async askUserAboutModifications(modifications: FileModification[]): Promise<boolean> {
     this.mainWindow.webContents.send('modification-warning', modifications);
     return new Promise((resolve) => {
-      const handler = (_: any, decision: boolean) => {
-        resolve(decision);
-      };
-      this.mainWindow.webContents.once('modification-decision', handler);
+      this.modificationResolver = resolve;
     });
+  }
+
+  resolveModificationDecision(decision: boolean) {
+    if (this.modificationResolver) {
+      this.modificationResolver(decision);
+      this.modificationResolver = null;
+    }
   }
 
   private sendProgress(progress: UndoProgress): void {

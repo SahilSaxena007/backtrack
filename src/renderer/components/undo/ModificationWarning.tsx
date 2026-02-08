@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import type { FileModification } from '../../../main/services/modification-detector';
+import type { FileModification } from '@shared/types';
 
 interface Props {
   modifications: FileModification[];
