@@ -14,6 +14,8 @@ export default function ModificationWarning({
   onCancel,
   onViewDetails,
 }: Props) {
+  console.log('[ModificationWarning] Rendering with', modifications.length, 'modifications');
+
   return (
     <motion.div
       initial={{ opacity: 0 }}

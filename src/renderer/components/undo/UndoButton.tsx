@@ -7,10 +7,17 @@ export default function UndoButton() {
   const { canUndo, description, isUndoing } = useUndoStore();
   const [showConfirmation, setShowConfirmation] = useState(false);
 
-  if (!canUndo && !isUndoing) return null;
+  console.log('[UndoButton] Render - canUndo:', canUndo, 'isUndoing:', isUndoing, 'description:', description);
+
+  if (!canUndo && !isUndoing) {
+    console.log('[UndoButton] Not rendering (canUndo=false, isUndoing=false)');
+    return null;
+  }
 
   const handleClick = () => {
+    console.log('[UndoButton] Clicked - canUndo:', canUndo, 'isUndoing:', isUndoing);
     if (canUndo && !isUndoing) {
+      console.log('[UndoButton] Opening confirmation modal');
       setShowConfirmation(true);
     }
   };

@@ -57,6 +57,7 @@ function createMainControlWindow(): void {
   });
 
   mainControlWindow.on('closed', () => {
+    console.log('[App] Main control window closed - cleaning up other windows');
     mainControlWindow = null;
     // Clean up floating button and drawer when control window closes
     if (floatingButtonWindow) {
@@ -265,7 +266,13 @@ app.whenReady().then(async () => {
 });
 
 app.on('window-all-closed', () => {
+  console.log('[App] All windows closed');
+  console.log('[App] mainControlWindow:', mainControlWindow ? 'exists' : 'null');
+  console.log('[App] floatingButtonWindow:', floatingButtonWindow ? 'exists' : 'null');
+  console.log('[App] chatDrawerWindow:', chatDrawerWindow ? 'exists' : 'null');
+
   if (process.platform !== 'darwin') {
+    console.log('[App] Quitting app (Windows/Linux)');
     app.quit();
   }
 });

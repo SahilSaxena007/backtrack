@@ -59,13 +59,19 @@ function App() {
       console.log('[ExecutionProgress]', progress);
       updateExecution(progress);
       if (progress?.status === 'success' && window.api?.getLatestExecution) {
+        console.log('[App] Execution success! Fetching latest execution for undo...');
         window.api.getLatestExecution().then((res: any) => {
+          console.log('[App] getLatestExecution result:', res);
           if (res?.success && res.execution) {
+            console.log('[App] Enabling undo with execution_id:', res.execution.execution_id);
             enableUndo({
               execution_id: res.execution.execution_id,
               description: res.execution.description || 'File organization',
               completed_at: res.execution.completed_at || new Date().toISOString(),
             });
+            console.log('[App] enableUndo called');
+          } else {
+            console.log('[App] Cannot enable undo - no execution data');
           }
         });
       }
@@ -78,7 +84,9 @@ function App() {
   useEffect(() => {
     if (!window.api?.onModificationWarning) return;
     const unsub = window.api.onModificationWarning((mods: FileModification[]) => {
+      console.log('[App] Modification warning received:', mods.length, 'modifications');
       setModifications(mods);
+      console.log('[App] Modifications state updated, modal should appear');
     });
     return () => {
       if (unsub) unsub();
@@ -96,6 +104,22 @@ function App() {
         <ProgressOverlay />
         <UndoButton />
         <UndoProgress />
+        {modifications && (
+          <ModificationWarning
+            modifications={modifications}
+            onCancel={() => {
+              window.api.sendModificationDecision(false);
+              setModifications(null);
+            }}
+            onUndoAnyway={() => {
+              window.api.sendModificationDecision(true);
+              setModifications(null);
+            }}
+            onViewDetails={() => {
+              alert(modifications.map((m) => `${m.type.toUpperCase()}: ${m.path} (${m.message})`).join('\n'));
+            }}
+          />
+        )}
       </>
     );
   }
@@ -128,6 +152,22 @@ function App() {
         <ProgressOverlay />
         <UndoButton />
         <UndoProgress />
+        {modifications && (
+          <ModificationWarning
+            modifications={modifications}
+            onCancel={() => {
+              window.api.sendModificationDecision(false);
+              setModifications(null);
+            }}
+            onUndoAnyway={() => {
+              window.api.sendModificationDecision(true);
+              setModifications(null);
+            }}
+            onViewDetails={() => {
+              alert(modifications.map((m) => `${m.type.toUpperCase()}: ${m.path} (${m.message})`).join('\n'));
+            }}
+          />
+        )}
       </>
     );
   }
@@ -158,9 +198,11 @@ function App() {
       <ProgressOverlay />
       <UndoButton />
       <UndoProgress />
-      {modifications && (
-        <ModificationWarning
-          modifications={modifications}
+      {(() => {
+        console.log('[App] Render check - modifications:', modifications ? `${modifications.length} items` : 'null');
+        return modifications ? (
+          <ModificationWarning
+            modifications={modifications}
           onCancel={() => {
             window.api.sendModificationDecision(false);
             setModifications(null);
@@ -177,7 +219,8 @@ function App() {
             );
           }}
         />
-      )}
+        ) : null;
+      })()}
     </>
   );
 }

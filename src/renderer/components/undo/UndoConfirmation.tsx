@@ -10,25 +10,38 @@ export default function UndoConfirmation({ onClose }: Props) {
     useUndoStore.getState();
 
   const handleConfirm = async () => {
+    console.log('[UndoConfirmation] Confirm clicked');
     onClose();
     startUndo();
     try {
       let execId = executionId;
+      console.log('[UndoConfirmation] executionId from store:', execId);
+
       if (!execId && window.api?.getLatestExecution) {
+        console.log('[UndoConfirmation] Fetching latest execution...');
         const latest = await window.api.getLatestExecution();
         execId = latest?.execution?.execution_id;
+        console.log('[UndoConfirmation] Latest execution ID:', execId);
       }
+
       if (!execId) {
         throw new Error('No execution available to undo');
       }
+
+      console.log('[UndoConfirmation] Calling executeUndo with ID:', execId);
       const result = await window.api.executeUndo?.(execId);
+      console.log('[UndoConfirmation] Undo result:', result);
+
       if (result?.success) {
+        console.log('[UndoConfirmation] Undo succeeded');
         completeUndo();
       } else {
+        console.error('[UndoConfirmation] Undo failed:', result?.error);
         disableUndo();
         alert(`Undo failed: ${result?.error || 'Unknown error'}`);
       }
     } catch (error: any) {
+      console.error('[UndoConfirmation] Undo error:', error);
       disableUndo();
       alert(`Undo failed: ${error?.message || 'Unknown error'}`);
     }

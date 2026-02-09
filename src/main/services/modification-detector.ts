@@ -10,6 +10,10 @@ import { FileModification } from '../../shared/types';
  */
 export class ModificationDetector {
   async detectModifications(backupPath: string, targetFolder: string): Promise<FileModification[]> {
+    console.log('[ModificationDetector] Starting detection...');
+    console.log('[ModificationDetector] Backup path:', backupPath);
+    console.log('[ModificationDetector] Target folder:', targetFolder);
+
     const modifications: FileModification[] = [];
 
     const metadataPath = path.join(backupPath, '.backup-metadata.json');
@@ -17,17 +21,30 @@ export class ModificationDetector {
     // Load metadata (not used yet but reserved for future smart checks)
     await fs.readJson(metadataPath).catch(() => ({} as BackupMetadata));
 
+    console.log('[ModificationDetector] Scanning current files...');
     const currentFiles = await this.getAllFiles(targetFolder);
+    console.log('[ModificationDetector] Found', currentFiles.length, 'current files');
+
+    console.log('[ModificationDetector] Scanning backup files...');
     const backupFiles = await this.getAllFiles(backupPath);
+    console.log('[ModificationDetector] Found', backupFiles.length, 'backup files');
 
     // Compare backup → current
+    console.log('[ModificationDetector] Comparing', backupFiles.length, 'files...');
+    let comparedCount = 0;
     for (const backupFile of backupFiles) {
       if (backupFile === '.backup-metadata.json') continue;
 
       const backupFilePath = path.join(backupPath, backupFile);
       const currentFilePath = path.join(targetFolder, backupFile);
 
+      if (comparedCount % 5 === 0) {
+        console.log(`[ModificationDetector] Progress: ${comparedCount}/${backupFiles.length} files compared`);
+      }
+      comparedCount++;
+
       if (!(await fs.pathExists(currentFilePath))) {
+        console.log(`[ModificationDetector] File deleted: ${backupFile}`);
         modifications.push({
           path: backupFile,
           type: 'deleted',
@@ -40,6 +57,7 @@ export class ModificationDetector {
       const currentHash = await this.calculateFileHash(currentFilePath);
 
       if (backupHash !== currentHash) {
+        console.log(`[ModificationDetector] File modified: ${backupFile}`);
         modifications.push({
           path: backupFile,
           type: 'modified',
@@ -47,11 +65,14 @@ export class ModificationDetector {
         });
       }
     }
+    console.log('[ModificationDetector] Comparison complete');
 
     // Check for new files in current not in backup
+    console.log('[ModificationDetector] Checking for new files...');
     for (const currentFile of currentFiles) {
       const backupFilePath = path.join(backupPath, currentFile);
       if (!(await fs.pathExists(backupFilePath))) {
+        console.log(`[ModificationDetector] File added: ${currentFile}`);
         modifications.push({
           path: currentFile,
           type: 'added',
@@ -60,6 +81,7 @@ export class ModificationDetector {
       }
     }
 
+    console.log('[ModificationDetector] Detection complete:', modifications.length, 'modifications found');
     return modifications;
   }
 

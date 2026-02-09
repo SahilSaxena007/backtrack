@@ -141,13 +141,21 @@ export class UndoEngine {
   }
 
   private async askUserAboutModifications(modifications: FileModification[]): Promise<boolean> {
+    console.log('[UndoEngine] Asking user about', modifications.length, 'modifications');
+    // Broadcast to all windows (main panel, chat drawer, etc.)
     this.mainWindow.webContents.send('modification-warning', modifications);
+    BrowserWindow.getAllWindows().forEach((win) => {
+      if (win !== this.mainWindow && !win.isDestroyed()) {
+        win.webContents.send('modification-warning', modifications);
+      }
+    });
     return new Promise((resolve) => {
       this.modificationResolver = resolve;
     });
   }
 
   resolveModificationDecision(decision: boolean) {
+    console.log('[UndoEngine] User decision:', decision ? 'PROCEED' : 'CANCEL');
     if (this.modificationResolver) {
       this.modificationResolver(decision);
       this.modificationResolver = null;
@@ -155,7 +163,13 @@ export class UndoEngine {
   }
 
   private sendProgress(progress: UndoProgress): void {
+    // Broadcast to all windows
     this.mainWindow.webContents.send('undo-progress', progress);
+    BrowserWindow.getAllWindows().forEach((win) => {
+      if (win !== this.mainWindow && !win.isDestroyed()) {
+        win.webContents.send('undo-progress', progress);
+      }
+    });
   }
 }
 
