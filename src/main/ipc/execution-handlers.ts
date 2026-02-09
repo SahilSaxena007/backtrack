@@ -1,5 +1,25 @@
 import { ipcMain } from 'electron';
+import * as os from 'os';
+import * as path from 'path';
 import { executionEngine } from '../main';
+
+function toFriendlyExecutionError(rawMessage?: string): string {
+  const message = (rawMessage || '').toLowerCase();
+
+  if (message.includes('access denied') || message.includes('permission')) {
+    return 'Backtrack could not organize this folder because permission is restricted. Please choose a folder you can edit.';
+  }
+
+  if (message.includes('source not found') || message.includes('folder not found')) {
+    return 'Could not organize these files because one or more paths are no longer available. Please rescan and try again.';
+  }
+
+  if (message.includes('destination') || message.includes('move_files_batch missing')) {
+    return 'Could not organize these files. The folder structure changed during execution. Please generate a fresh plan and retry.';
+  }
+
+  return 'Backtrack could not complete the organization safely. No permanent changes were committed.';
+}
 
 /**
  * IPC handlers for execution (F5).
@@ -15,13 +35,17 @@ export function registerExecutionHandlers(): void {
     } catch (error: any) {
       console.error('[IPC] execute-plan FAILED:', error);
       console.error('[IPC] Error stack:', error?.stack);
-      return { success: false, error: error?.message || 'Execution failed' };
+      return {
+        success: false,
+        error: toFriendlyExecutionError(error?.message),
+        technicalError: error?.message || 'Execution failed'
+      };
     }
   });
 
   ipcMain.handle('run-demo-execution', async () => {
     try {
-      const basePath = process.env.BASE_PATH || 'C:\\Users\\sahil\\backtrack-f5-test';
+      const basePath = process.env.BASE_PATH || path.join(os.homedir(), 'backtrack-demo');
       const folderName = `BacktrackDemo_${Date.now()}`;
       const targetFolder = basePath;
       const newFolderPath = `${basePath}\\${folderName}`;

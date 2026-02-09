@@ -5,7 +5,16 @@ module.exports = {
     './src/renderer/index.html',
   ],
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        brand: {
+          primary: '#2563eb',
+          accent: '#10b981',
+          bgLight: '#f8fafc',
+          bgDark: '#0f172a',
+        },
+      },
+    },
   },
   plugins: [],
 };

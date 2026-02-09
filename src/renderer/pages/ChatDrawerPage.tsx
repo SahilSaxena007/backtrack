@@ -1,8 +1,59 @@
-import { useState, useRef, useEffect } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Settings, FolderOpen, Eye, EyeOff } from 'lucide-react';
-import { useConversationStore } from '../store/conversationStore';
+import {
+  BrainCircuit,
+  Eye,
+  EyeOff,
+  FolderOpen,
+  Search,
+  Send,
+  Settings,
+  ShieldCheck,
+  Sparkles,
+  XCircle
+} from 'lucide-react';
 import Fuse from 'fuse.js';
+import { useConversationStore } from '../store/conversationStore';
+import { BacktrackMark } from '../components/brand/BacktrackMark';
+
+type PlanningStageKey = 'analyze' | 'detect' | 'generate' | 'safety';
+
+interface PlanningStageState {
+  key: PlanningStageKey;
+  progress: number;
+  message: string;
+}
+
+const stageConfig: Array<{ key: PlanningStageKey; title: string; icon: any; percent: number }> = [
+  { key: 'analyze', title: 'Analyzing files', icon: Search, percent: 10 },
+  { key: 'detect', title: 'Detecting file types', icon: Sparkles, percent: 40 },
+  { key: 'generate', title: 'Generating optimal structure', icon: BrainCircuit, percent: 70 },
+  { key: 'safety', title: 'Safety check complete', icon: ShieldCheck, percent: 100 }
+];
+
+const genericTargets = new Set(['specific_path', 'unknown', 'target_folder']);
+
+const joinPath = (root: string, segment: string) => {
+  if (!segment) {
+    return root;
+  }
+  const separator = root.includes('\\') ? '\\' : '/';
+  if (root.endsWith('\\') || root.endsWith('/')) {
+    return `${root}${segment}`;
+  }
+  return `${root}${separator}${segment}`;
+};
+
+const formatPlanTimings = (plan: any) => {
+  const metadata = plan?.gemini_metadata;
+  if (!metadata) {
+    return '';
+  }
+  const draft = Math.round((metadata.stage1_latency_ms || 0) / 100) / 10;
+  const safety = Math.round((metadata.stage2_latency_ms || 0) / 100) / 10;
+  const undo = Math.round((metadata.stage3_latency_ms || 0) / 100) / 10;
+  return `Timing: draft ${draft}s, safety ${safety}s, undo ${undo}s.`;
+};
 
 export function ChatDrawerPage() {
   const [inputValue, setInputValue] = useState('');
@@ -11,40 +62,85 @@ export function ChatDrawerPage() {
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(0);
   const [fuse, setFuse] = useState<Fuse<string> | null>(null);
   const [isPreviewWorkspaceOpen, setIsPreviewWorkspaceOpen] = useState(false);
+  const [planningState, setPlanningState] = useState<PlanningStageState>({
+    key: 'analyze',
+    progress: 0,
+    message: ''
+  });
+  const [canCancelPlanning, setCanCancelPlanning] = useState(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const planningTimeoutsRef = useRef<number[]>([]);
+  const planningCancelledRef = useRef(false);
 
   const { messages, isLoading, addUserMessage, addAssistantMessage, setLoading, buildConversationContext } =
     useConversationStore();
 
-  // Initialize folder list and Fuse.js on mount
+  const stageStatus = useMemo(() => {
+    const currentIndex = stageConfig.findIndex((item) => item.key === planningState.key);
+    return stageConfig.map((stage, index) => ({
+      ...stage,
+      state: index < currentIndex ? 'complete' : index === currentIndex ? 'active' : 'pending'
+    }));
+  }, [planningState.key]);
+
+  const clearPlanningTimers = () => {
+    planningTimeoutsRef.current.forEach((timeoutId) => window.clearTimeout(timeoutId));
+    planningTimeoutsRef.current = [];
+  };
+
+  const updatePlanningStage = (key: PlanningStageKey, progress: number, message: string) => {
+    setPlanningState({ key, progress, message });
+  };
+
+  const startPlanningTimeline = (fileCount: number) => {
+    updatePlanningStage('analyze', 10, `Analyzing ${fileCount} files...`);
+    setCanCancelPlanning(true);
+
+    planningTimeoutsRef.current.push(
+      window.setTimeout(() => {
+        updatePlanningStage('detect', 40, 'Detecting file types...');
+      }, 1200)
+    );
+
+    planningTimeoutsRef.current.push(
+      window.setTimeout(() => {
+        updatePlanningStage('generate', 70, 'Generating optimal structure...');
+      }, 2800)
+    );
+  };
+
+  const stopPlanningTimeline = () => {
+    clearPlanningTimers();
+    setCanCancelPlanning(false);
+  };
+
   useEffect(() => {
-    // Safety: reset loading state in case it persisted from a previous session/crash
     setLoading(false);
 
     (async () => {
       try {
         const folders = await window.api.getFolderList();
-        console.log('[ChatDrawer] Loaded folder list:', folders.length, 'folders');
-
-        // Initialize Fuse.js for fuzzy search
         const fuseInstance = new Fuse<string>(folders, {
-          threshold: 0.3, // Fuzzy matching sensitivity (0 = exact, 1 = match anything)
+          threshold: 0.3,
           includeScore: true,
-          minMatchCharLength: 2,
+          minMatchCharLength: 2
         });
         setFuse(fuseInstance);
       } catch (error) {
-        console.error('[ChatDrawer] Error loading folder list:', error);
+        console.error('[ChatDrawer] Could not load folder list:', error);
       }
     })();
-  }, []);
 
-  // Auto-scroll to bottom when new messages arrive
+    return () => {
+      clearPlanningTimers();
+    };
+  }, [setLoading]);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isLoading]);
+  }, [messages, isLoading, planningState.progress]);
 
   useEffect(() => {
     let cancelled = false;
@@ -61,11 +157,11 @@ export function ChatDrawerPage() {
     };
 
     void syncPreviewWorkspaceState();
-    const interval = setInterval(syncPreviewWorkspaceState, 500);
+    const interval = window.setInterval(syncPreviewWorkspaceState, 500);
 
     return () => {
       cancelled = true;
-      clearInterval(interval);
+      window.clearInterval(interval);
     };
   }, []);
 
@@ -75,39 +171,19 @@ export function ChatDrawerPage() {
       setIsPreviewWorkspaceOpen(Boolean(result.visible));
       return;
     }
-
     if (result.message) {
-      addAssistantMessage(`Preview workspace: ${result.message}`);
+      addAssistantMessage(result.message);
     }
   };
 
-  // Auto-resize textarea as user types and trigger autocomplete
-  const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const target = e.target;
-    target.style.height = 'auto';
-    target.style.height = Math.min(target.scrollHeight, 120) + 'px';
-    const value = target.value;
-    setInputValue(value);
-
-    // Trigger autocomplete detection (debounced)
-    detectAndShowAutocomplete(value);
-  };
-
-  // Detect if user is typing a path and show autocomplete
   const detectAndShowAutocomplete = (value: string) => {
-    // Look for path patterns: "C:\", "/", or "~/"
     const pathPattern = /[C-Z]:\\[^"\s]*$|\/[^"\s]*$|~\/[^"\s]*/i;
     const match = value.match(pathPattern);
 
     if (match && fuse && match[0].length >= 2) {
-      // Extract the path query
       const query = match[0];
-      console.log('[ChatDrawer] Path detected:', query);
-
-      // Fuzzy search for matching folders
       const results = fuse.search(query);
-      const topMatches = results.slice(0, 10).map(r => r.item);
-
+      const topMatches = results.slice(0, 10).map((result) => result.item);
       if (topMatches.length > 0) {
         setSuggestions(topMatches);
         setShowAutocomplete(true);
@@ -115,299 +191,275 @@ export function ChatDrawerPage() {
       } else {
         setShowAutocomplete(false);
       }
-    } else {
-      setShowAutocomplete(false);
-    }
-  };
-
-  const handleSendMessage = async () => {
-    const trimmed = inputValue.trim();
-    if (!trimmed || isLoading) return;
-
-    // Add user message
-    addUserMessage(trimmed);
-    setInputValue('');
-
-    // Reset textarea height
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-    }
-
-    // Show loading state
-    setLoading(true);
-
-    try {
-      // Build conversation context from message history
-      const conversationContext = buildConversationContext();
-
-      console.log('[ChatDrawer] Calling Gemini API to parse intent...');
-      const startTime = Date.now();
-
-      // Call Gemini API via IPC to parse intent
-      const result = await window.api.parseIntent(trimmed, conversationContext);
-
-      const duration = Date.now() - startTime;
-      console.log(`[ChatDrawer] Gemini responded in ${duration}ms:`, result);
-
-      if (!result.success) {
-        // Show technical error (as requested)
-        addAssistantMessage(
-          `❌ Error parsing your request:\n\n${result.error}\n\nPlease try again or check your Gemini API key configuration.`
-        );
-        setLoading(false);
-        return;
-      }
-
-      const intent = result.intent!;
-
-      // Normalize intent target: if Gemini returns placeholder like "specific_path" or "unknown", fall back to default base path
-      const DEFAULT_BASE_PATH = import.meta.env.VITE_BASE_PATH || 'C:\\Users\\sahil\\backtrack-f5-test';
-      if (intent.target === 'specific_path' || intent.target === 'unknown') {
-        intent.target = DEFAULT_BASE_PATH;
-      }
-
-      // Check if clarification is needed
-      if (intent.needsClarification) {
-        console.log('[ChatDrawer] Intent unclear, generating clarification...');
-
-        // Generate clarification question
-        const clarificationResult = await window.api.generateClarification(intent);
-
-        if (clarificationResult.success && clarificationResult.question) {
-          addAssistantMessage(clarificationResult.question);
-        } else {
-          // Fallback clarification if generation fails
-          addAssistantMessage(
-            "I'd like to help, but I need a bit more information. Which folder would you like me to work with?"
-          );
-        }
-
-        // Stop loading so user can answer the clarification
-        setLoading(false);
-        return;
-      } else {
-        // Intent is clear! Show confirmation
-        const confirmationMessage = `✓ Got it! I'll help you **${intent.action}** files in **${intent.target}** ${intent.method !== 'unknown' ? `**${intent.method.replace('_', ' ')}**` : ''}.
-
-${intent.constraints.length > 0 ? `📋 Constraints: ${intent.constraints.join(', ')}` : ''}
-
-Scanning folder...`;
-
-        addAssistantMessage(confirmationMessage);
-
-        // Resolve target folder to full path
-        const BASE_PATH =
-          import.meta.env.VITE_BASE_PATH || 'C:\\Users\\sahil\\backtrack-f5-test';
-
-        let targetPath: string;
-
-        // If intent.target is generic/descriptive (like "specific_path"), use BASE_PATH directly
-        if (intent.target === 'specific_path' || intent.target === 'unknown' || intent.target === 'target_folder') {
-          targetPath = BASE_PATH;
-          console.log(`[ChatDrawer] Intent target is generic ("${intent.target}"), using BASE_PATH: ${targetPath}`);
-        }
-        // If target mentions the BASE_PATH folder name, extract it
-        else if (trimmed.toLowerCase().includes('backtrack-f5-test')) {
-          targetPath = BASE_PATH;
-          console.log(`[ChatDrawer] User mentioned backtrack-f5-test, using BASE_PATH: ${targetPath}`);
-        }
-        // If target is absolute path, use it directly
-        else if (intent.target.match(/^[A-Z]:\\/i)) {
-          targetPath = intent.target;
-          console.log(`[ChatDrawer] Using absolute path from intent: ${targetPath}`);
-        }
-        // Otherwise, treat as subfolder of BASE_PATH
-        else {
-          targetPath = `${BASE_PATH}\\${intent.target}`;
-          console.log(`[ChatDrawer] Resolved "${intent.target}" to subfolder: ${targetPath}`);
-        }
-
-        // Scan the target folder
-        console.log(`[ChatDrawer] Scanning folder: ${targetPath}`);
-        const scanResult = await window.api.scanFolder(targetPath, true); // recursive scan
-
-        if (!scanResult.success) {
-          // Show error if scan fails
-          addAssistantMessage(
-            `❌ Couldn't access folder: ${scanResult.error}\n\nPlease check the path and try again.`
-          );
-          setLoading(false);
-          return;
-        }
-
-        const files = scanResult.files || [];
-        console.log(`[ChatDrawer] Scanned ${files.length} items`);
-
-        // Prepare F1 → F2 handoff data
-        const enforcedConstraints = [
-          ...intent.constraints,
-          'Use the existing target folder; do not create a new root folder.',
-          'Only create subfolders inside the target folder when necessary.',
-          'Move existing files (especially images) into the target/Images folder; do not duplicate or re-create the target folder.'
-        ];
-
-        const handoffData = {
-          conversationId: useConversationStore.getState().conversationId,
-          userIntent: trimmed,
-          targetFolder: targetPath, // Use resolved path, not intent.target
-          constraints: enforcedConstraints,
-          clarifications: [], // Will be populated if clarification flow is implemented
-          scannedFiles: files,
-          timestamp: new Date().toISOString(),
-          parsedIntent: intent,
-        };
-
-        // Store handoff data for debugging/traceability
-        console.log('[ChatDrawer] F1 → F2 Handoff Data:', handoffData);
-        window.localStorage.setItem('f1-to-f2-handoff', JSON.stringify(handoffData));
-
-        // Show scan results
-        const scanSummary = `📁 Scanned **${files.length}** items in ${targetPath}
-
-_Clarity Score: ${(intent.clarityScore * 100).toFixed(0)}%_`;
-        addAssistantMessage(scanSummary);
-
-        // ---- F2: Planning pipeline ----
-        addAssistantMessage('🤖 Generating action plan...');
-        try {
-          const planResult = await window.api.generatePlan(handoffData);
-
-          if (!planResult?.success || !planResult.plan) {
-            addAssistantMessage(`❌ Planning failed: ${planResult?.error || 'Unknown error'}`);
-            setLoading(false);
-            return;
-          }
-
-          // Optional stage timing summary if available
-          if (planResult.plan.gemini_metadata) {
-            const { stage1_latency_ms, stage2_latency_ms, stage3_latency_ms } =
-              planResult.plan.gemini_metadata;
-            addAssistantMessage(
-              `Stage timings — Draft: ${stage1_latency_ms ?? '?'}ms, Safety: ${
-                stage2_latency_ms ?? '?'
-              }ms, Undo: ${stage3_latency_ms ?? '?'}ms`
-            );
-          }
-
-          // ---- F3: Preview ----
-          addAssistantMessage('✅ Plan ready! Opening preview workspace...');
-          const previewResult = await window.api.presentPreviewPlan(planResult.plan);
-          if (previewResult.success) {
-            setIsPreviewWorkspaceOpen(Boolean(previewResult.visible));
-          } else if (previewResult.cancelled) {
-            addAssistantMessage('Kept the current preview window open. New preview was not replaced.');
-          } else if (previewResult.message) {
-            addAssistantMessage(`Preview workspace error: ${previewResult.message}`);
-          }
-        } catch (planningError) {
-          console.error('[ChatDrawer] Planning error:', planningError);
-          addAssistantMessage('⚠️ Planning engine encountered an error. Please try again.');
-          setLoading(false);
-          return;
-        }
-      }
-
-      setLoading(false);
-
-    } catch (error) {
-      console.error('[ChatDrawer] Error in handleSendMessage:', error);
-
-      // Show technical error details
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
-      addAssistantMessage(
-        `❌ Unexpected error:\n\n${errorMessage}\n\nPlease check the console for more details.`
-      );
-      setLoading(false);
-    }
-  };
-
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    // Handle autocomplete navigation
-    if (showAutocomplete) {
-      if (e.key === 'ArrowDown') {
-        e.preventDefault();
-        setSelectedSuggestionIndex((prev) => Math.min(prev + 1, suggestions.length - 1));
-        return;
-      } else if (e.key === 'ArrowUp') {
-        e.preventDefault();
-        setSelectedSuggestionIndex((prev) => Math.max(prev - 1, 0));
-        return;
-      } else if (e.key === 'Enter' && !e.shiftKey) {
-        e.preventDefault();
-        insertSelectedSuggestion();
-        return;
-      } else if (e.key === 'Escape') {
-        e.preventDefault();
-        setShowAutocomplete(false);
-        return;
-      }
-    }
-
-    // Normal key handling
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
-    } else if (e.key === 'Escape' && !inputValue.trim()) {
-      window.api.closeDrawer();
-    }
-  };
-
-  // Insert selected suggestion at cursor position
-  const insertSelectedSuggestion = () => {
-    if (suggestions.length === 0 || !textareaRef.current) return;
-
-    const selectedPath = suggestions[selectedSuggestionIndex];
-    const textarea = textareaRef.current;
-    const cursorPos = textarea.selectionStart;
-    const textBefore = inputValue.substring(0, cursorPos);
-    const textAfter = inputValue.substring(cursorPos);
-
-    // Find the start of the path pattern
-    const pathPattern = /[C-Z]:\\[^"\s]*$|\/[^"\s]*$|~\/[^"\s]*/i;
-    const match = textBefore.match(pathPattern);
-
-    if (match) {
-      const pathStart = cursorPos - match[0].length;
-      const newValue = inputValue.substring(0, pathStart) + selectedPath + textAfter;
-      setInputValue(newValue);
-
-      // Set cursor position after inserted path
-      setTimeout(() => {
-        textarea.selectionStart = textarea.selectionEnd = pathStart + selectedPath.length;
-        textarea.focus();
-      }, 0);
+      return;
     }
 
     setShowAutocomplete(false);
   };
 
-  // Handle clicking a suggestion
-  const handleSuggestionClick = (index: number) => {
-    if (suggestions.length === 0 || !textareaRef.current) return;
+  const handleInput = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const target = event.target;
+    target.style.height = 'auto';
+    target.style.height = `${Math.min(target.scrollHeight, 120)}px`;
+
+    setInputValue(target.value);
+    detectAndShowAutocomplete(target.value);
+  };
+
+  const insertSelectedSuggestion = (index = selectedSuggestionIndex) => {
+    if (!textareaRef.current || suggestions.length === 0) {
+      return;
+    }
 
     const selectedPath = suggestions[index];
     const textarea = textareaRef.current;
     const cursorPos = textarea.selectionStart;
     const textBefore = inputValue.substring(0, cursorPos);
     const textAfter = inputValue.substring(cursorPos);
-
-    // Find the start of the path pattern
     const pathPattern = /[C-Z]:\\[^"\s]*$|\/[^"\s]*$|~\/[^"\s]*/i;
     const match = textBefore.match(pathPattern);
 
-    if (match) {
-      const pathStart = cursorPos - match[0].length;
-      const newValue = inputValue.substring(0, pathStart) + selectedPath + textAfter;
-      setInputValue(newValue);
-
-      // Set cursor position after inserted path
-      setTimeout(() => {
-        textarea.selectionStart = textarea.selectionEnd = pathStart + selectedPath.length;
-        textarea.focus();
-      }, 0);
+    if (!match) {
+      return;
     }
 
+    const pathStart = cursorPos - match[0].length;
+    const newValue = inputValue.substring(0, pathStart) + selectedPath + textAfter;
+    setInputValue(newValue);
+
+    window.setTimeout(() => {
+      textarea.selectionStart = textarea.selectionEnd = pathStart + selectedPath.length;
+      textarea.focus();
+    }, 0);
+
     setShowAutocomplete(false);
+  };
+
+  const handleCancelPlanning = () => {
+    planningCancelledRef.current = true;
+    stopPlanningTimeline();
+    setLoading(false);
+    addAssistantMessage('Planning cancelled. You can send a new instruction anytime.');
+  };
+
+  const resolveBasePath = async () => {
+    const stored = localStorage.getItem('backtrack.active-folder');
+    if (stored) {
+      return stored;
+    }
+    return window.api.getActiveBasePath();
+  };
+
+  const resolveTargetPath = (intentTarget: string, userMessage: string, basePath: string) => {
+    if (genericTargets.has(intentTarget)) {
+      return basePath;
+    }
+
+    if (/^[A-Z]:\\/i.test(intentTarget) || intentTarget.startsWith('/')) {
+      return intentTarget;
+    }
+
+    const baseFolderName = basePath.split(/[\\/]/).pop()?.toLowerCase();
+    if (baseFolderName && userMessage.toLowerCase().includes(baseFolderName)) {
+      return basePath;
+    }
+
+    return joinPath(basePath, intentTarget);
+  };
+
+  const handleSendMessage = async () => {
+    const trimmed = inputValue.trim();
+    if (!trimmed || isLoading) {
+      return;
+    }
+
+    addUserMessage(trimmed);
+    setInputValue('');
+    planningCancelledRef.current = false;
+    updatePlanningStage('analyze', 4, 'Planning your organization...');
+    setLoading(true);
+
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
+
+    try {
+      const conversationContext = buildConversationContext();
+      const parseResult = await window.api.parseIntent(trimmed, conversationContext);
+
+      if (planningCancelledRef.current) {
+        return;
+      }
+
+      if (!parseResult.success || !parseResult.intent) {
+        addAssistantMessage('I could not understand that request clearly. Please rephrase what you want organized.');
+        setLoading(false);
+        stopPlanningTimeline();
+        return;
+      }
+
+      const intent = parseResult.intent;
+      const basePath = await resolveBasePath();
+
+      if (genericTargets.has(intent.target)) {
+        intent.target = basePath;
+      }
+
+      if (intent.needsClarification) {
+        const clarificationResult = await window.api.generateClarification(intent);
+        if (clarificationResult.success && clarificationResult.question) {
+          addAssistantMessage(clarificationResult.question);
+        } else {
+          addAssistantMessage('Which folder should I organize for you?');
+        }
+        setLoading(false);
+        stopPlanningTimeline();
+        return;
+      }
+
+      const targetPath = resolveTargetPath(intent.target, trimmed, basePath);
+      const scopeResult = await window.api.setActiveBasePath(targetPath);
+      if (!scopeResult.success) {
+        addAssistantMessage('That folder could not be accessed. Please choose a valid folder path and try again.');
+        setLoading(false);
+        stopPlanningTimeline();
+        return;
+      }
+
+      addAssistantMessage(`Scanning files in ${targetPath}...`);
+      updatePlanningStage('analyze', 8, 'Scanning folder contents...');
+
+      const scanResult = await window.api.scanFolder(targetPath, true);
+      if (planningCancelledRef.current) {
+        return;
+      }
+
+      if (!scanResult.success) {
+        addAssistantMessage('Could not organize files in that location. Please try a different folder.');
+        setLoading(false);
+        stopPlanningTimeline();
+        return;
+      }
+
+      const files = scanResult.files || [];
+      const fileOnlyCount = files.filter((item: any) => !item.isDirectory).length;
+      const folderCount = files.filter((item: any) => item.isDirectory).length;
+
+      if (fileOnlyCount === 0) {
+        addAssistantMessage('No files found in this folder yet. Add files and try again.');
+        setLoading(false);
+        stopPlanningTimeline();
+        return;
+      }
+
+      if (fileOnlyCount < 2) {
+        addAssistantMessage('Too few files to organize meaningfully. Add a few more files and try again.');
+        setLoading(false);
+        stopPlanningTimeline();
+        return;
+      }
+
+      if (folderCount >= 4) {
+        addAssistantMessage('This folder already has multiple subfolders. I will preserve structure where possible.');
+      }
+
+      addAssistantMessage(`Found ${fileOnlyCount} files. Creating a smart organization plan...`);
+      startPlanningTimeline(fileOnlyCount);
+
+      const enforcedConstraints = [
+        ...(intent.constraints || []),
+        'Use the existing target folder; do not create a new root folder.',
+        'Only create subfolders inside the target folder when necessary.',
+        'Do not delete user files.'
+      ];
+
+      const handoffData = {
+        conversationId: useConversationStore.getState().conversationId,
+        userIntent: trimmed,
+        targetFolder: targetPath,
+        constraints: enforcedConstraints,
+        clarifications: [],
+        scannedFiles: files,
+        timestamp: new Date().toISOString(),
+        parsedIntent: intent
+      };
+
+      const planResult = await window.api.generatePlan(handoffData);
+      if (planningCancelledRef.current) {
+        return;
+      }
+
+      if (!planResult?.success || !planResult.plan) {
+        addAssistantMessage(
+          'Could not generate a safe organization plan for this folder. Please adjust your request and try again.'
+        );
+        setLoading(false);
+        stopPlanningTimeline();
+        return;
+      }
+
+      updatePlanningStage('safety', 100, 'Safety check complete!');
+      stopPlanningTimeline();
+
+      const previewResult = await window.api.presentPreviewPlan(planResult.plan);
+      if (previewResult.success) {
+        setIsPreviewWorkspaceOpen(Boolean(previewResult.visible));
+        const timingSummary = formatPlanTimings(planResult.plan);
+        addAssistantMessage(
+          `Ready to organize! This plan moves ${planResult.plan.summary.files_affected} files into ${planResult.plan.summary.folders_created} categories. ${timingSummary}`.trim()
+        );
+      } else if (previewResult.cancelled) {
+        addAssistantMessage('Kept your current preview. I did not replace it.');
+      } else {
+        addAssistantMessage(previewResult.message || 'Preview could not be opened right now.');
+      }
+
+      setLoading(false);
+    } catch (error) {
+      console.error('[ChatDrawer] handleSendMessage failed:', error);
+      if (!planningCancelledRef.current) {
+        addAssistantMessage(
+          'Something went wrong while preparing your plan. Please try again in a moment.'
+        );
+      }
+      setLoading(false);
+      stopPlanningTimeline();
+    }
+  };
+
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (showAutocomplete) {
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        setSelectedSuggestionIndex((prev) => Math.min(prev + 1, suggestions.length - 1));
+        return;
+      }
+      if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        setSelectedSuggestionIndex((prev) => Math.max(prev - 1, 0));
+        return;
+      }
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        insertSelectedSuggestion();
+        return;
+      }
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setShowAutocomplete(false);
+        return;
+      }
+    }
+
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      void handleSendMessage();
+      return;
+    }
+
+    if (event.key === 'Escape' && !inputValue.trim()) {
+      void window.api.closeDrawer();
+    }
   };
 
   const handleClose = async () => {
@@ -415,112 +467,63 @@ _Clarity Score: ${(intent.clarityScore * 100).toFixed(0)}%_`;
   };
 
   return (
-    <div className="w-full h-full flex items-end justify-end">
-      {/* Chat Drawer Container - slides in from right, aligns with button */}
+    <div className="h-full w-full flex items-end justify-end">
       <motion.div
         initial={{ x: 420, opacity: 0 }}
         animate={{ x: 0, opacity: 1 }}
         exit={{ x: 420, opacity: 0 }}
         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className="w-full h-full bg-white/95 backdrop-blur-lg rounded-2xl rounded-tr-none rounded-br-none shadow-2xl flex flex-col overflow-hidden border-l border-gray-200 border-r-0"
+        className="flex h-full w-full flex-col overflow-hidden rounded-2xl rounded-br-none rounded-tr-none border-l border-blue-100 bg-white/95 shadow-2xl backdrop-blur-lg"
       >
-        {/* Header - 60px height as per spec */}
-        <div className="h-15 border-b border-gray-200 flex items-center justify-between px-4 bg-gray-50/80 flex-shrink-0">
+        <div className="h-15 flex flex-shrink-0 items-center justify-between border-b border-blue-100 bg-blue-50/70 px-4">
           <div className="flex items-center gap-3">
-            {/* Logo 24x24px */}
-            <div className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10z"
-                  stroke="white"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
+            <div className="flex h-6 w-6 items-center justify-center rounded-lg bg-gradient-to-br from-blue-600 to-emerald-500">
+              <BacktrackMark className="h-4 w-4 text-white" />
             </div>
-            <h1 className="text-lg font-semibold text-gray-900">Backtrack</h1>
+            <h1 className="text-lg font-semibold text-slate-900">Backtrack</h1>
           </div>
           <div className="flex items-center gap-2">
-            {/* Optional Settings button for future preferences */}
             <button
-              className="w-7 h-7 rounded-lg hover:bg-gray-200 flex items-center justify-center transition-colors"
+              className="flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-blue-100"
               title="Settings (coming soon)"
+              type="button"
             >
-              <Settings className="w-4 h-4 text-gray-600" />
+              <Settings className="h-4 w-4 text-slate-600" />
             </button>
             <button
               onClick={handleTogglePreviewWorkspace}
-              className="w-7 h-7 rounded-lg hover:bg-gray-200 flex items-center justify-center transition-colors"
+              className="flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-blue-100"
               title={isPreviewWorkspaceOpen ? 'Hide preview workspace' : 'Show preview workspace'}
+              type="button"
             >
               {isPreviewWorkspaceOpen ? (
-                <EyeOff className="w-4 h-4 text-gray-600" />
+                <EyeOff className="h-4 w-4 text-slate-600" />
               ) : (
-                <Eye className="w-4 h-4 text-gray-600" />
+                <Eye className="h-4 w-4 text-slate-600" />
               )}
             </button>
             <button
               onClick={handleClose}
-              className="w-7 h-7 rounded-lg hover:bg-gray-200 flex items-center justify-center transition-colors"
+              className="flex h-7 w-7 items-center justify-center rounded-lg transition-colors hover:bg-blue-100"
+              type="button"
             >
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 16 16"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                d="M12 4L4 12M4 4L12 12"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-              />
-            </svg>
-          </button>
-        </div>
+              <XCircle className="h-4 w-4 text-slate-600" />
+            </button>
+          </div>
         </div>
 
-        {/* Scrollable Message Area with generous spacing (16px vertical) */}
-        <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4 custom-scrollbar">
+        <div className="custom-scrollbar flex-1 space-y-4 overflow-y-auto px-4 py-4">
           {messages.length === 0 ? (
-            // Welcome message when no messages
-            <div className="flex items-center justify-center h-full">
-              <div className="text-center max-w-xs">
-                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full mx-auto mb-4 flex items-center justify-center">
-                  <svg
-                    width="32"
-                    height="32"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10z"
-                      stroke="white"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </svg>
+            <div className="flex h-full items-center justify-center">
+              <div className="max-w-xs text-center">
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-emerald-500">
+                  <BacktrackMark className="h-8 w-8 text-white" />
                 </div>
-                <h2 className="text-lg font-semibold text-gray-900 mb-2">
-                  Welcome to Backtrack!
-                </h2>
-                <p className="text-sm text-gray-600">
-                  Tell me how you'd like to organize your files
-                </p>
+                <h2 className="mb-2 text-lg font-semibold text-slate-900">Welcome to Backtrack</h2>
+                <p className="text-sm text-slate-600">Describe how you want your folder organized.</p>
               </div>
             </div>
           ) : (
-            // Message bubbles
             <>
               <AnimatePresence>
                 {messages.map((message) => (
@@ -529,30 +532,24 @@ _Clarity Score: ${(intent.clarityScore * 100).toFixed(0)}%_`;
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.2 }}
-                    className={`flex ${
-                      message.role === 'user' ? 'justify-end' : 'justify-start'
-                    }`}
+                    className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
                     <div
-                      className={`max-w-[80%] rounded-2xl px-4 py-2 ${
+                      className={`max-w-[82%] rounded-2xl px-4 py-2 ${
                         message.role === 'user'
-                          ? 'bg-blue-500 text-white rounded-br-none'
-                          : 'bg-gray-100 text-gray-900 rounded-bl-none'
+                          ? 'rounded-br-none bg-blue-600 text-white'
+                          : 'rounded-bl-none border border-slate-200 bg-slate-50 text-slate-900'
                       }`}
                     >
-                      <p className="text-sm whitespace-pre-wrap break-words">
-                        {message.content}
-                      </p>
+                      <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
                       <p
-                        className={`text-xs mt-1 ${
-                          message.role === 'user'
-                            ? 'text-blue-100'
-                            : 'text-gray-500'
+                        className={`mt-1 text-xs ${
+                          message.role === 'user' ? 'text-blue-100' : 'text-slate-500'
                         }`}
                       >
                         {new Date(message.timestamp).toLocaleTimeString([], {
                           hour: '2-digit',
-                          minute: '2-digit',
+                          minute: '2-digit'
                         })}
                       </p>
                     </div>
@@ -560,40 +557,60 @@ _Clarity Score: ${(intent.clarityScore * 100).toFixed(0)}%_`;
                 ))}
               </AnimatePresence>
 
-              {/* Typing Indicator - Left-aligned like assistant messages */}
               {isLoading && (
                 <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0 }}
-                  className="flex justify-start"
+                  className="max-w-[92%] rounded-2xl border border-blue-200 bg-blue-50/70 p-4"
                 >
-                  <div className="bg-gray-100 rounded-2xl rounded-bl-none px-4 py-3 max-w-[80%]">
-                    <div className="flex space-x-1">
-                      <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
-                      <div
-                        className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                        style={{ animationDelay: '0.1s' }}
-                      />
-                      <div
-                        className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"
-                        style={{ animationDelay: '0.2s' }}
-                      />
-                    </div>
+                  <p className="text-sm font-semibold text-blue-900">Planning your organization...</p>
+                  <p className="mt-1 text-xs text-blue-700">{planningState.message || 'Preparing...'}</p>
+
+                  <div className="mt-3 h-2 w-full rounded-full bg-blue-100">
+                    <div
+                      className="h-2 rounded-full bg-gradient-to-r from-blue-600 to-emerald-500 transition-all duration-700"
+                      style={{ width: `${planningState.progress}%` }}
+                    />
                   </div>
+
+                  <div className="mt-3 space-y-1">
+                    {stageStatus.map((stage) => {
+                      const Icon = stage.icon;
+                      const classes =
+                        stage.state === 'complete'
+                          ? 'text-emerald-700'
+                          : stage.state === 'active'
+                            ? 'text-blue-800'
+                            : 'text-slate-500';
+                      return (
+                        <div key={stage.key} className={`flex items-center gap-2 text-xs ${classes}`}>
+                          <Icon className="h-3.5 w-3.5" />
+                          <span>{stage.title}</span>
+                          <span className="ml-auto font-medium">[{stage.percent}%]</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {canCancelPlanning && (
+                    <button
+                      type="button"
+                      onClick={handleCancelPlanning}
+                      className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold text-red-700 transition hover:bg-red-100"
+                    >
+                      Cancel
+                    </button>
+                  )}
                 </motion.div>
               )}
 
-              {/* Auto-scroll anchor */}
               <div ref={messagesEndRef} />
             </>
           )}
         </div>
 
-        {/* Input Area - Fixed at bottom, 60px height initial */}
-        <div className="border-t border-gray-200 p-3 bg-gray-50/80 backdrop-blur-sm flex-shrink-0 min-h-[60px]">
+        <div className="min-h-[60px] flex-shrink-0 border-t border-blue-100 bg-blue-50/60 p-3 backdrop-blur-sm">
           <div className="relative flex items-end gap-2">
-            {/* Autocomplete Dropdown - positioned above input */}
             <AnimatePresence>
               {showAutocomplete && suggestions.length > 0 && (
                 <motion.div
@@ -601,70 +618,58 @@ _Clarity Score: ${(intent.clarityScore * 100).toFixed(0)}%_`;
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: 10 }}
                   transition={{ duration: 0.15 }}
-                  className="absolute bottom-full mb-2 left-0 right-12 bg-white rounded-lg shadow-lg border border-gray-200 max-h-64 overflow-y-auto z-50"
+                  className="absolute bottom-full left-0 right-12 z-50 mb-2 max-h-64 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-lg"
                 >
-                  {suggestions.length > 50 ? (
-                    <div className="px-4 py-3 text-sm text-gray-500 text-center">
-                      Too many results ({suggestions.length}). Type more to narrow down...
-                    </div>
-                  ) : suggestions.length === 0 ? (
-                    <div className="px-4 py-3 text-sm text-gray-500 text-center flex items-center justify-center gap-2">
-                      <FolderOpen className="w-4 h-4" />
-                      No folders found
-                    </div>
-                  ) : (
-                    suggestions.map((folder, index) => (
-                      <div
-                        key={folder}
-                        onClick={() => handleSuggestionClick(index)}
-                        className={`px-4 py-2 cursor-pointer text-sm flex items-center gap-2 transition-colors ${
-                          index === selectedSuggestionIndex
-                            ? 'bg-blue-50 text-blue-700'
-                            : 'hover:bg-gray-50 text-gray-700'
-                        }`}
-                      >
-                        <FolderOpen className="w-4 h-4 flex-shrink-0" />
-                        <span className="truncate">{folder}</span>
-                      </div>
-                    ))
-                  )}
+                  {suggestions.map((folder, index) => (
+                    <button
+                      type="button"
+                      key={folder}
+                      onClick={() => insertSelectedSuggestion(index)}
+                      className={`flex w-full items-center gap-2 px-4 py-2 text-left text-sm transition-colors ${
+                        index === selectedSuggestionIndex
+                          ? 'bg-blue-50 text-blue-700'
+                          : 'text-slate-700 hover:bg-slate-50'
+                      }`}
+                    >
+                      <FolderOpen className="h-4 w-4 flex-shrink-0" />
+                      <span className="truncate">{folder}</span>
+                    </button>
+                  ))}
                 </motion.div>
               )}
             </AnimatePresence>
-            {/* Multi-line textarea with auto-grow up to 5 lines (120px) */}
+
             <textarea
               ref={textareaRef}
               value={inputValue}
               onChange={handleInput}
               onKeyDown={handleKeyDown}
-              placeholder="Type your request..."
+              placeholder="Describe how you want this folder organized..."
               rows={1}
               disabled={isLoading}
-              className="flex-1 resize-none rounded-lg border border-gray-300 px-3 py-3 text-[14px] focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none disabled:bg-gray-100 disabled:cursor-not-allowed"
+              className="flex-1 resize-none rounded-lg border border-slate-300 px-3 py-3 text-[14px] focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-100"
               style={{ maxHeight: '120px' }}
             />
-            {/* Send Button - 36x36px, absolute positioning inside input */}
+
             <button
-              onClick={handleSendMessage}
+              onClick={() => void handleSendMessage()}
               disabled={!inputValue.trim() || isLoading}
-              className={`flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center transition-all ${
+              className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full transition-all ${
                 inputValue.trim() && !isLoading
-                  ? 'bg-blue-500 hover:bg-blue-600 text-white shadow-md'
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  ? 'bg-blue-600 text-white shadow-md hover:bg-blue-700'
+                  : 'cursor-not-allowed bg-slate-300 text-slate-500'
               }`}
+              type="button"
             >
-              <Send className="w-4 h-4" />
+              <Send className="h-4 w-4" />
             </button>
           </div>
-          <p className="text-xs text-gray-500 mt-2">
-            {showAutocomplete
-              ? '↑↓ to navigate • Enter to select • Esc to cancel'
-              : 'Enter to send • Shift+Enter for new line • Esc to close • Type C:\\ for folder autocomplete'}
+          <p className="mt-2 text-xs text-slate-500">
+            Enter to send. Shift+Enter for new line. Esc to close drawer.
           </p>
         </div>
       </motion.div>
 
-      {/* Custom scrollbar styles */}
       <style>{`
         .custom-scrollbar::-webkit-scrollbar {
           width: 6px;
@@ -673,11 +678,11 @@ _Clarity Score: ${(intent.clarityScore * 100).toFixed(0)}%_`;
           background: transparent;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: #cbd5e1;
+          background: #94a3b8;
           border-radius: 3px;
         }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: #94a3b8;
+          background: #64748b;
         }
       `}</style>
     </div>

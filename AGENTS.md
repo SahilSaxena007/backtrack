@@ -11,7 +11,7 @@
 ## Architecture Overview
 
 - Multi-window Electron app:
-  - `#/control-panel` -> `MainControlPage` (600x400, entry point).
+  - `#/control-panel` -> first-run `OnboardingPage` then `MainControlPage` (600x400, entry point).
   - `#/floating-button` -> `FloatingButtonPage` (100x100, always-on-top overlay).
   - `#/chat-drawer` -> `ChatDrawerPage` (400x600, slides in left of button).
   - `#/preview-workspace` -> `PreviewWorkspacePage` (dedicated centered preview/undo workspace window).
@@ -75,6 +75,14 @@
 - Preview/undo UI has been decoupled from chat drawer into a dedicated preview workspace window centered on the active monitor work area.
 - Chat drawer now includes a mini eye toggle button to open/close the preview workspace independently.
 - New plan previews ask for confirmation before replacing an already-visible preview workspace session.
+- First-run onboarding now appears before control panel with two choices: Demo Mode (safe sandbox) or Custom Folder.
+- Demo mode creates `backtrack-demo` in the current OS user home directory with sample files for judge-safe testing.
+- Added folder picker + runtime folder scope IPC (`select-folder-dialog`, `setup-demo-folder`, `set/get-active-base-path`) and synced renderer/main path scope.
+- Chat drawer now uses stage-based planning progress messaging with cancellable in-flight UX and judge-friendly error copy.
+- Visual refresh completed: purple accents removed, professional blue/green palette applied across control, chat, preview, and floating button.
+- Preview readability improved with high-contrast glass, folder file counts, size hints, and explicit "This will happen" transition annotations.
+- Execution success overlay now includes celebration confetti, summary metrics, and quick actions (`View Changes`, `Undo`).
+- Control panel keyboard shortcuts added: `Ctrl/Cmd+K` (chat), `Ctrl/Cmd+P` (preview), `Ctrl/Cmd+Z` (undo latest).
 
 ## Agent Workflow Notes
 

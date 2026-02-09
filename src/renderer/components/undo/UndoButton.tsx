@@ -1,4 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion';
+import { RotateCcw } from 'lucide-react';
 import { useState } from 'react';
 import { useUndoStore } from '../../store/undoStore';
 import UndoConfirmation from './UndoConfirmation';
@@ -7,20 +8,9 @@ export default function UndoButton() {
   const { canUndo, description, isUndoing } = useUndoStore();
   const [showConfirmation, setShowConfirmation] = useState(false);
 
-  console.log('[UndoButton] Render - canUndo:', canUndo, 'isUndoing:', isUndoing, 'description:', description);
-
   if (!canUndo && !isUndoing) {
-    console.log('[UndoButton] Not rendering (canUndo=false, isUndoing=false)');
     return null;
   }
-
-  const handleClick = () => {
-    console.log('[UndoButton] Clicked - canUndo:', canUndo, 'isUndoing:', isUndoing);
-    if (canUndo && !isUndoing) {
-      console.log('[UndoButton] Opening confirmation modal');
-      setShowConfirmation(true);
-    }
-  };
 
   return (
     <>
@@ -30,22 +20,24 @@ export default function UndoButton() {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            onClick={handleClick}
+            onClick={() => {
+              if (canUndo && !isUndoing) {
+                setShowConfirmation(true);
+              }
+            }}
             disabled={!canUndo || isUndoing}
-            className={`fixed bottom-24 right-6 z-[9996] px-4 py-3 rounded-xl backdrop-blur-[20px] backdrop-saturate-[150%] border shadow-lg transition-all duration-200 ${
+            className={`fixed right-6 top-20 z-[9996] rounded-xl border px-3 py-2 shadow-lg backdrop-blur-xl transition-all duration-200 ${
               canUndo && !isUndoing
-                ? 'bg-orange-500/90 hover:bg-orange-600/90 text-white border-orange-400 cursor-pointer hover:scale-105'
-                : 'bg-gray-300/70 text-gray-500 border-gray-400 cursor-not-allowed'
+                ? 'border-amber-200 bg-white/95 text-amber-700 hover:bg-amber-50'
+                : 'cursor-not-allowed border-slate-300 bg-slate-100 text-slate-500'
             }`}
           >
             <div className="flex items-center gap-2">
-              <span className="text-xl">⏪</span>
+              <RotateCcw className="h-4 w-4" />
               <div className="text-left">
-                <div className="font-semibold text-sm">
-                  {isUndoing ? 'Undoing...' : 'Undo'}
-                </div>
-                <div className="text-xs opacity-80">
-                  {canUndo ? description.substring(0, 30) : 'No undo available'}
+                <div className="text-xs font-semibold">{isUndoing ? 'Undoing...' : 'Undo'}</div>
+                <div className="max-w-[150px] truncate text-[10px] opacity-80">
+                  {canUndo ? description : 'No undo available'}
                 </div>
               </div>
             </div>

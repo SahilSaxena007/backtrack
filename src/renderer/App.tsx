@@ -4,6 +4,7 @@ import { FloatingButtonPage } from './pages/FloatingButtonPage';
 import { ChatDrawerPage } from './pages/ChatDrawerPage';
 import { PreviewTestPage } from './pages/PreviewTestPage';
 import { PreviewWorkspacePage } from './pages/PreviewWorkspacePage';
+import { OnboardingPage } from './pages/OnboardingPage';
 import { PreviewToast } from './components/preview/PreviewToast';
 import { PreviewPanel } from './components/preview/PreviewPanel';
 import { PreviewButton } from './components/preview/PreviewButton';
@@ -19,7 +20,8 @@ import ModificationWarning from './components/undo/ModificationWarning';
 function App() {
   const [currentPage, setCurrentPage] = useState<string>('');
   const [modifications, setModifications] = useState<FileModification[] | null>(null);
-  const { showToast, plan } = usePreviewStore();
+  const [isOnboardingComplete, setIsOnboardingComplete] = useState(false);
+  const { showToast, showButton, plan } = usePreviewStore();
   const updateExecution = useExecutionStore((s) => s.updateProgress);
   const enableUndo = useUndoStore((s) => s.enableUndo);
   const isPreviewSurfacePage = currentPage === 'preview-workspace' || currentPage === 'preview-test';
@@ -35,6 +37,16 @@ function App() {
 
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  useEffect(() => {
+    const completed = localStorage.getItem('backtrack.onboarding.completed') === 'true';
+    const activeFolder = localStorage.getItem('backtrack.active-folder');
+    setIsOnboardingComplete(completed);
+
+    if (completed && activeFolder && window.api?.setActiveBasePath) {
+      void window.api.setActiveBasePath(activeFolder);
+    }
   }, []);
 
   useEffect(() => {
@@ -100,6 +112,7 @@ function App() {
       console.log('[ExecutionProgress]', progress);
       updateExecution(progress);
       if (progress?.status === 'success' && window.api?.getLatestExecution) {
+        showButton();
         window.api.getLatestExecution().then((res: any) => {
           if (res?.success && res.execution) {
             enableUndo({
@@ -117,7 +130,7 @@ function App() {
         unsubscribe();
       }
     };
-  }, [isPreviewSurfacePage, updateExecution, enableUndo]);
+  }, [isPreviewSurfacePage, updateExecution, enableUndo, showButton]);
 
   useEffect(() => {
     if (!isPreviewSurfacePage || !window.api?.onModificationWarning) {
@@ -170,6 +183,18 @@ function App() {
   );
 
   if (currentPage === 'control-panel') {
+    if (!isOnboardingComplete) {
+      return (
+        <OnboardingPage
+          onComplete={({ path }) => {
+            setIsOnboardingComplete(true);
+            if (window.api?.setActiveBasePath) {
+              void window.api.setActiveBasePath(path);
+            }
+          }}
+        />
+      );
+    }
     return <MainControlPage />;
   }
 

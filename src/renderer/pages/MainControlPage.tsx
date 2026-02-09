@@ -1,114 +1,153 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { Keyboard } from 'lucide-react';
+import { BacktrackMark } from '../components/brand/BacktrackMark';
 
 export function MainControlPage() {
   const [isDeployed, setIsDeployed] = useState(false);
   const [status, setStatus] = useState('');
+  const [activeFolder, setActiveFolder] = useState('');
 
   useEffect(() => {
-    // Check if button is already deployed
     window.api.isButtonDeployed().then(setIsDeployed);
+    const storedFolder = localStorage.getItem('backtrack.active-folder') || '';
+    setActiveFolder(storedFolder);
+  }, []);
+
+  useEffect(() => {
+    const onKeyDown = async (event: KeyboardEvent) => {
+      if (!(event.metaKey || event.ctrlKey)) {
+        return;
+      }
+
+      if (event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        await window.api.openDrawer();
+        setStatus('Chat drawer opened.');
+      }
+
+      if (event.key.toLowerCase() === 'p') {
+        event.preventDefault();
+        const result = await window.api.showPreviewWorkspace();
+        setStatus(result.message);
+      }
+
+      if (event.key.toLowerCase() === 'z') {
+        event.preventDefault();
+        const proceed = window.confirm('Undo the most recent file organization?');
+        if (!proceed) {
+          return;
+        }
+
+        const latest = await window.api.getLatestExecution();
+        const executionId = latest?.execution?.execution_id;
+        if (!executionId) {
+          setStatus('No previous organization found to undo.');
+          return;
+        }
+
+        const result = await window.api.executeUndo(executionId);
+        if (result?.success) {
+          setStatus('Undo started. Track progress in the preview workspace.');
+        } else {
+          setStatus(result?.error || 'Could not undo the latest operation.');
+        }
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
 
   const handleDeploy = async () => {
-    setStatus('Deploying...');
+    setStatus('Deploying floating button...');
     const result = await window.api.deployFloatingButton();
     if (result.success) {
       setIsDeployed(true);
-      setStatus('✓ Floating button deployed! Look for it at the bottom-right of your screen.');
+      setStatus('Floating button deployed at bottom-right of your active display.');
     } else {
-      setStatus(`Error: ${result.message}`);
+      setStatus(result.message || 'Could not deploy floating button.');
     }
   };
 
   const handleHide = async () => {
-    setStatus('Hiding...');
+    setStatus('Hiding workspace windows...');
     const result = await window.api.hideFloatingButton();
     if (result.success) {
       setIsDeployed(false);
-      setStatus('Floating button hidden.');
+      setStatus('Floating button and companion windows hidden.');
     } else {
-      setStatus(`Error: ${result.message}`);
+      setStatus(result.message || 'Could not hide floating button.');
     }
   };
 
+  const statusClasses = status.toLowerCase().includes('could not') || status.toLowerCase().includes('error')
+    ? 'border-red-200 bg-red-50 text-red-700'
+    : 'border-emerald-200 bg-emerald-50 text-emerald-700';
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-8">
-      <div className="max-w-md w-full">
-        <div className="bg-white rounded-2xl shadow-xl p-8">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl mx-auto mb-4 flex items-center justify-center">
-              <svg
-                width="32"
-                height="32"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10z"
-                  stroke="white"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
+    <div className="min-h-screen bg-[linear-gradient(145deg,#f8fafc_0%,#dbeafe_55%,#cbd5e1_100%)] p-8">
+      <div className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-3xl items-center justify-center">
+        <div className="w-full rounded-3xl border border-blue-100 bg-white/90 p-9 shadow-[0_36px_120px_rgba(15,23,42,0.2)] backdrop-blur-xl">
+          <div className="mb-8 text-center">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-emerald-500 shadow-lg">
+              <BacktrackMark className="h-8 w-8 text-white" />
             </div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              Backtrack
-            </h1>
-            <p className="text-gray-600">
-              AI-Powered File Organization
+            <h1 className="text-3xl font-bold text-slate-900">Backtrack Control Panel</h1>
+            <p className="mt-2 text-slate-600">AI file organization with preview and one-click undo.</p>
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">Active folder scope</p>
+            <p className="mt-2 truncate text-sm font-medium text-slate-700">
+              {activeFolder || 'No folder selected yet'}
             </p>
           </div>
 
-          {/* Deploy Button */}
-          <div className="space-y-4">
+          <div className="mt-6 space-y-3">
             {!isDeployed ? (
               <button
                 onClick={handleDeploy}
-                className="w-full py-4 px-6 bg-gradient-to-br from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
+                className="w-full rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 px-6 py-3 font-semibold text-white shadow-lg shadow-blue-500/30 transition hover:from-blue-700 hover:to-blue-600"
               >
-                Deploy Backtrack Button
+                Deploy Floating Button
               </button>
             ) : (
               <button
                 onClick={handleHide}
-                className="w-full py-4 px-6 bg-gray-800 hover:bg-gray-700 text-white font-semibold rounded-xl shadow-lg hover:shadow-xl transition-all duration-200"
+                className="w-full rounded-xl bg-slate-800 px-6 py-3 font-semibold text-white shadow-lg transition hover:bg-slate-700"
               >
-                Hide Backtrack Button
+                Hide Floating Button
               </button>
             )}
-
-            {/* Status Message */}
-            {status && (
-              <div className={`p-4 rounded-lg text-sm ${
-                status.includes('Error')
-                  ? 'bg-red-50 text-red-700 border border-red-200'
-                  : 'bg-green-50 text-green-700 border border-green-200'
-              }`}>
-                {status}
-              </div>
-            )}
           </div>
 
-          {/* Instructions */}
-          <div className="mt-8 pt-6 border-t border-gray-200">
-            <h3 className="text-sm font-semibold text-gray-700 mb-2">
-              How it works:
-            </h3>
-            <ol className="text-sm text-gray-600 space-y-2">
-              <li>1. Click "Deploy Backtrack Button" above</li>
-              <li>2. Look for the floating button at bottom-right of your screen</li>
-              <li>3. Click the floating button to open the chat drawer</li>
-              <li>4. Organize your files using natural language</li>
-            </ol>
+          {status && (
+            <div className={`mt-4 rounded-xl border px-4 py-3 text-sm ${statusClasses}`}>
+              {status}
+            </div>
+          )}
+
+          <div className="mt-8 rounded-2xl border border-blue-100 bg-blue-50/70 p-4">
+            <div className="mb-3 flex items-center gap-2 text-blue-900">
+              <Keyboard className="h-4 w-4" />
+              <p className="text-sm font-semibold">Keyboard shortcuts</p>
+            </div>
+            <div className="grid gap-2 text-sm text-blue-900/90 md:grid-cols-3">
+              <p>
+                <span className="font-semibold">Ctrl/Cmd + K</span>
+                {' '}Open chat drawer
+              </p>
+              <p>
+                <span className="font-semibold">Ctrl/Cmd + P</span>
+                {' '}Show preview workspace
+              </p>
+              <p>
+                <span className="font-semibold">Ctrl/Cmd + Z</span>
+                {' '}Undo latest organization
+              </p>
+            </div>
           </div>
         </div>
-
-        <p className="text-center text-gray-400 text-xs mt-6">
-          Gemini 3 Hackathon Project • Day 2 Progress
-        </p>
       </div>
     </div>
   );

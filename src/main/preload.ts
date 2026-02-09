@@ -15,6 +15,18 @@ const api = {
   validateFolderPath: (folderPath: string): Promise<ValidationResult> =>
     ipcRenderer.invoke('validate-folder-path', folderPath),
 
+  setActiveBasePath: (folderPath: string): Promise<BasePathResult> =>
+    ipcRenderer.invoke('set-active-base-path', folderPath),
+
+  getActiveBasePath: (): Promise<string> =>
+    ipcRenderer.invoke('get-active-base-path'),
+
+  selectFolderDialog: (): Promise<FolderSelectionResult> =>
+    ipcRenderer.invoke('select-folder-dialog'),
+
+  setupDemoFolder: (): Promise<DemoFolderResult> =>
+    ipcRenderer.invoke('setup-demo-folder'),
+
   // Gemini operations (to be implemented)
   parseIntent: (message: string, context: string): Promise<IntentResult> =>
     ipcRenderer.invoke('parse-intent', message, context),
@@ -114,6 +126,25 @@ interface ValidationResult {
   exists: boolean;
   isDirectory: boolean;
   error?: string;
+}
+
+interface BasePathResult {
+  success: boolean;
+  path?: string;
+  message: string;
+}
+
+interface FolderSelectionResult {
+  success: boolean;
+  cancelled?: boolean;
+  path?: string;
+  message: string;
+}
+
+interface DemoFolderResult {
+  success: boolean;
+  path?: string;
+  message: string;
 }
 
 interface IntentResult {

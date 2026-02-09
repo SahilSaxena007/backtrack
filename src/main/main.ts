@@ -1,5 +1,7 @@
-import { app, BrowserWindow, dialog, ipcMain, screen } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, screen, type OpenDialogOptions } from 'electron';
 import * as path from 'path';
+import * as os from 'os';
+import * as fs from 'fs/promises';
 import * as dotenv from 'dotenv';
 import { registerFilesystemHandlers } from './ipc/filesystem-handlers';
 import { registerGeminiHandlers } from './ipc/gemini-handlers';
@@ -28,6 +30,60 @@ export let executionEngine: ExecutionEngine;
 export let undoEngine: UndoEngine;
 
 const isDev = !app.isPackaged;
+
+function getDemoFolderPath(): string {
+  return path.join(os.homedir(), 'backtrack-demo');
+}
+
+async function ensureDemoFolder(): Promise<string> {
+  const demoRoot = getDemoFolderPath();
+  await fs.mkdir(demoRoot, { recursive: true });
+
+  const sampleFiles: Array<{ relativePath: string; content: string }> = [
+    {
+      relativePath: 'vacation-photo-01.jpg',
+      content: 'Sample image placeholder for Backtrack demo.'
+    },
+    {
+      relativePath: 'vacation-photo-02.png',
+      content: 'Sample image placeholder for Backtrack demo.'
+    },
+    {
+      relativePath: 'tax-document-2025.pdf',
+      content: 'Sample PDF placeholder for Backtrack demo.'
+    },
+    {
+      relativePath: 'meeting-notes.txt',
+      content: 'Demo notes:\n- Organize images\n- Group documents\n- Keep recent files easy to find'
+    },
+    {
+      relativePath: 'project-proposal.docx',
+      content: 'Sample Word document placeholder for Backtrack demo.'
+    },
+    {
+      relativePath: 'receipts/january-receipt.pdf',
+      content: 'Receipt placeholder content.'
+    },
+    {
+      relativePath: 'music/idea-track.mp3',
+      content: 'Sample audio placeholder for Backtrack demo.'
+    }
+  ];
+
+  await Promise.all(
+    sampleFiles.map(async (item) => {
+      const fullPath = path.join(demoRoot, item.relativePath);
+      await fs.mkdir(path.dirname(fullPath), { recursive: true });
+      try {
+        await fs.access(fullPath);
+      } catch {
+        await fs.writeFile(fullPath, item.content, 'utf8');
+      }
+    })
+  );
+
+  return demoRoot;
+}
 
 function getActiveDisplay() {
   const cursorPoint = screen.getCursorScreenPoint();
@@ -375,7 +431,7 @@ function setupIPC(): void {
     }
     previewWindow.show();
     previewWindow.focus();
-    sendPreviewWorkspaceEvent({ type: 'set-mode', mode: 'panel' });
+    sendPreviewWorkspaceEvent({ type: 'set-mode', mode: 'button' });
     return { success: true, visible: true, message: 'Preview workspace shown' };
   });
 
@@ -390,7 +446,7 @@ function setupIPC(): void {
     }
     previewWindow.show();
     previewWindow.focus();
-    sendPreviewWorkspaceEvent({ type: 'set-mode', mode: 'panel' });
+    sendPreviewWorkspaceEvent({ type: 'set-mode', mode: 'button' });
     return { success: true, visible: true, message: 'Preview workspace shown' };
   });
 
@@ -408,6 +464,46 @@ function setupIPC(): void {
   ipcMain.handle('clear-preview-plan', () => {
     currentPreviewPlan = null;
     return { success: true };
+  });
+
+  ipcMain.handle('select-folder-dialog', async () => {
+    const sourceWindow = mainControlWindow ?? chatDrawerWindow ?? previewWorkspaceWindow ?? undefined;
+    const options: OpenDialogOptions = {
+      title: 'Choose folder to organize',
+      properties: ['openDirectory', 'createDirectory'],
+      buttonLabel: 'Use this folder'
+    };
+    const result = sourceWindow
+      ? await dialog.showOpenDialog(sourceWindow, options)
+      : await dialog.showOpenDialog(options);
+
+    if (result.canceled || result.filePaths.length === 0) {
+      return { success: false, cancelled: true, message: 'No folder selected' };
+    }
+
+    return {
+      success: true,
+      cancelled: false,
+      path: result.filePaths[0],
+      message: 'Folder selected'
+    };
+  });
+
+  ipcMain.handle('setup-demo-folder', async () => {
+    try {
+      const demoPath = await ensureDemoFolder();
+      return {
+        success: true,
+        path: demoPath,
+        message: 'Demo folder is ready'
+      };
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to create demo folder';
+      return {
+        success: false,
+        message
+      };
+    }
   });
 
   // Enable/disable mouse events on floating button (for button hover area)
@@ -487,7 +583,7 @@ async function initializeExecutionEngine() {
   const ledgerService = new LedgerService();
   await ledgerService.initialize();
 
-  const basePath = process.env.BASE_PATH || 'C:\\Users\\sahil\\backtrack-f5-test';
+  const basePath = process.env.BASE_PATH || os.homedir();
   const mcpClient = await getMCPClient([basePath]);
 
   if (!mainControlWindow) {

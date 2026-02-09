@@ -291,14 +291,14 @@ export function PreviewTestPage() {
                 </button>
                 <button
                   onClick={showPanel}
-                  className="px-4 py-2 rounded-lg bg-purple-500 text-white font-semibold hover:bg-purple-600 transition disabled:opacity-50"
+                  className="px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700 transition disabled:opacity-50"
                   disabled={!plan}
                 >
                   Show Panel
                 </button>
                 <button
                   onClick={showButton}
-                  className="px-4 py-2 rounded-lg bg-indigo-500 text-white font-semibold hover:bg-indigo-600 transition disabled:opacity-50"
+                  className="px-4 py-2 rounded-lg bg-emerald-500 text-white font-semibold hover:bg-emerald-600 transition disabled:opacity-50"
                   disabled={!plan}
                 >
                   Show Button

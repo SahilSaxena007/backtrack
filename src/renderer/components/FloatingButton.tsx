@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { MessageCircle, X } from 'lucide-react';
+import { X } from 'lucide-react';
+import { BacktrackMark } from './brand/BacktrackMark';
 
 export function FloatingButton() {
   const [drawerOpen, setDrawerOpen] = useState(false);
@@ -65,7 +66,7 @@ export function FloatingButton() {
         ${
           drawerOpen
             ? 'bg-white border border-l-0 border-gray-200'
-            : 'bg-gradient-to-br from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700'
+            : 'bg-gradient-to-br from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600'
         }
       `}
       whileHover={{ scale: 1.1 }}
@@ -112,7 +113,7 @@ export function FloatingButton() {
         {drawerOpen ? (
           <X className={`w-6 h-6 ${drawerOpen ? 'text-gray-700' : 'text-white'}`} strokeWidth={2.5} />
         ) : (
-          <MessageCircle className="w-6 h-6 text-white" strokeWidth={2.5} />
+          <BacktrackMark className="h-6 w-6 text-white" />
         )}
       </motion.div>
 

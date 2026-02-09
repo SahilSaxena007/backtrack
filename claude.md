@@ -24,6 +24,8 @@ The app uses **four separate Electron windows**, not a traditional single-window
 
 1. **Main Control Panel** (`MainControlPage`) - 600x400px
    - Entry point when app launches
+   - First-run flow now shows `OnboardingPage` before control panel content
+   - Onboarding lets user choose Demo Mode or Custom Folder
    - Contains "Deploy Backtrack Button" to show/hide floating button
    - Loads at `http://localhost:5173/#/control-panel`
 
@@ -54,6 +56,11 @@ All renderer↔main communication uses **typed IPC via preload script** (`src/ma
 - Renderer calls `window.api.methodName()`
 - Main process handles via `ipcMain.handle('method-name', ...)`
 - Security: `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`
+- New onboarding/filesystem IPC added:
+  - `select-folder-dialog`
+  - `setup-demo-folder`
+  - `set-active-base-path`
+  - `get-active-base-path`
 
 ### State Management
 
@@ -61,6 +68,8 @@ Two Zustand stores in renderer process:
 
 - **`uiStore.ts`**: Drawer visibility, loading state, new message flags
 - **`conversationStore.ts`**: Message history (user/assistant), conversation ID
+- **`previewStore.ts`**: F3 preview mode state + approve/modify/cancel actions
+- **`executionStore.ts` / `undoStore.ts`**: execution and undo overlays
 
 **Important**: Button polls drawer state every 500ms to stay synced (see `FloatingButton.tsx`).
 
@@ -199,6 +208,6 @@ Current status: **Tasks 3-8 complete + Task 9 (folder scanning) partial**
 
 **Next:**
 
-- F3: Plan Preview & Confirmation UI
-- F4: Execution Engine (MCP operations)
-- F1 Task 9 (remaining): Clarification flow refinement
+- Add optional onboarding reset in control panel settings
+- Add richer runtime planning progress events from main process (currently renderer timeline-based)
+- Expand demo fixture generation to include nested folders with richer file metadata

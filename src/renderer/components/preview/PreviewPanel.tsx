@@ -15,7 +15,7 @@ const riskStyles: Record<string, string> = {
 
 const formatDuration = (ms?: number) => {
   if (!ms || Number.isNaN(ms)) {
-    return '—';
+    return '-';
   }
   const seconds = Math.max(0, Math.round(ms / 1000));
   return `${seconds}s`;
@@ -237,21 +237,21 @@ export function PreviewPanel() {
     <AnimatePresence>
       {mode === 'panel' && plan && (
         <motion.div
-          className="fixed inset-0 z-[10010] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          className="fixed inset-0 z-[10010] flex items-center justify-center bg-transparent"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={showButton}
         >
           <motion.div
-            className="flex h-[83vh] w-[86vw] max-w-[86vw] flex-col rounded-2xl border border-white/20 bg-white/10 text-white shadow-[0_40px_120px_rgba(2,6,23,0.6)] backdrop-blur-xl"
+            className="flex h-[83vh] w-[86vw] max-w-[86vw] flex-col rounded-2xl border border-slate-700 bg-slate-900/95 text-white shadow-[0_40px_120px_rgba(2,6,23,0.6)]"
             initial={{ opacity: 0, scale: 0.98 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.98 }}
             transition={{ type: 'spring', stiffness: 200, damping: 22 }}
             onClick={(event) => event.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b border-white/10 bg-white/10 px-6 py-3 backdrop-blur-xl">
+            <div className="flex items-center justify-between border-b border-slate-700 bg-slate-900 px-6 py-3">
               <div className="flex items-center gap-2 text-sm text-slate-300">
                 <span className="text-slate-400">Preview</span>
                 <ChevronRight className="h-4 w-4 text-slate-500" />
@@ -274,11 +274,11 @@ export function PreviewPanel() {
                   <ChevronsUp className="h-3.5 w-3.5" />
                   Collapse All
                 </button>
-                <span className="h-4 w-px bg-white/10" />
+                <span className="h-4 w-px bg-slate-700" />
                 <button
                   type="button"
                   onClick={showButton}
-                  className="rounded-full border border-white/10 p-1 text-slate-300 transition hover:bg-white/10"
+                  className="rounded-full border border-slate-700 p-1 text-slate-300 transition hover:bg-slate-800"
                   aria-label="Close preview panel"
                 >
                   <X className="h-4 w-4" />
@@ -288,8 +288,8 @@ export function PreviewPanel() {
 
             <div className="flex flex-1 flex-col gap-4 px-6 py-4">
               <div className="grid flex-1 grid-cols-1 gap-4 lg:grid-cols-2">
-                <div className="flex min-h-0 flex-col rounded-2xl border border-white/10 bg-white/10 backdrop-blur-xl">
-                  <div className="border-b border-white/5 px-4 py-3">
+                <div className="flex min-h-0 flex-col rounded-2xl border border-slate-700 bg-slate-800/90">
+                  <div className="border-b border-slate-700 px-4 py-3">
                     <p className="text-[11px] uppercase tracking-[0.3em] text-slate-500">Before</p>
                     <p className="text-xs text-slate-400">Current State</p>
                   </div>
@@ -302,9 +302,9 @@ export function PreviewPanel() {
                   </div>
                 </div>
 
-                <div className="relative flex min-h-0 flex-col rounded-2xl border border-white/10 bg-white/10 backdrop-blur-xl">
+                <div className="relative flex min-h-0 flex-col rounded-2xl border border-slate-700 bg-slate-800/90">
                   <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-indigo-500/50 via-indigo-400/70 to-transparent" />
-                  <div className="border-b border-white/5 px-4 py-3">
+                  <div className="border-b border-slate-700 px-4 py-3">
                     <p className="text-[11px] uppercase tracking-[0.3em] text-indigo-300">After</p>
                     <p className="text-xs text-slate-400">Proposed State</p>
                   </div>
@@ -319,12 +319,12 @@ export function PreviewPanel() {
                 </div>
               </div>
 
-              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/10 bg-white/10 py-3 backdrop-blur-xl">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-700 bg-slate-900 py-3">
                 <div className="flex flex-1 flex-wrap items-center gap-3">
                   {stats?.map((stat, index) => (
                     <div
                       key={stat.label}
-                      className={`flex flex-col px-4 ${index !== 0 ? 'border-l border-white/5' : ''}`}
+                      className={`flex flex-col px-4 ${index !== 0 ? 'border-l border-slate-700' : ''}`}
                     >
                       <span className="text-[10px] uppercase tracking-[0.2em] text-slate-500">
                         {stat.label}
@@ -347,14 +347,14 @@ export function PreviewPanel() {
                   <button
                     type="button"
                     onClick={cancelPlan}
-                    className="rounded-xl border border-white/10 bg-transparent px-4 py-2 text-xs font-semibold text-slate-200 transition hover:bg-white/5"
+                    className="rounded-xl border border-slate-600 bg-transparent px-4 py-2 text-xs font-semibold text-slate-200 transition hover:bg-slate-800"
                   >
                     Cancel
                   </button>
                   <button
                     type="button"
                     onClick={modifyPlan}
-                    className="rounded-xl border border-white/10 bg-[#111318] px-4 py-2 text-xs font-semibold text-slate-100 transition hover:bg-white/5"
+                    className="rounded-xl border border-slate-600 bg-slate-800 px-4 py-2 text-xs font-semibold text-slate-100 transition hover:bg-slate-700"
                   >
                     Modify
                   </button>

@@ -8,6 +8,13 @@
 - [x] Added chat-drawer mini eye toggle button to independently open/close preview workspace.
 - [x] Added replacement confirmation prompt when a new plan arrives while preview workspace is already visible.
 - [x] Verified with `npm run lint` (TypeScript `--noEmit`) after updates.
+- [x] Added first-run onboarding UI with Demo Mode / Custom Folder selection before main control panel.
+- [x] Added demo folder bootstrap + folder picker IPC + active folder scope syncing between renderer and main.
+- [x] Refreshed F3/F5 surfaces with professional blue/green palette (removed purple accents).
+- [x] Improved before/after preview hierarchy with high-contrast glass, transition annotations, folder file counts, and file-size hints.
+- [x] Added staged planning progress UX and judge-friendly copy in chat drawer, including cancel affordance.
+- [x] Added success celebration flow (confetti + summary + quick actions) in execution overlay.
+- [x] Verified with `npm run build:main` and `npm run lint` after full integration.
 **Backtrack Desktop App - Gemini 3 Hackathon**
 
 **Timeline:** Day 4 Morning (4 hours)  

@@ -1,8 +1,8 @@
 import { IpcMain } from 'electron';
 import * as fs from 'fs';
+import * as os from 'os';
 import * as path from 'path';
 import { getMCPClient } from '../services/mcp-client';
-import { getFolderIndexer } from '../services/folder-indexer';
 
 interface FileMetadata {
   name: string;
@@ -27,159 +27,140 @@ interface ValidationResult {
   error?: string;
 }
 
-const BASE_PATH = process.env.BASE_PATH || 'C:\\Users\\sahil\\backtrack-f5-test';
-let useMCP = process.env.USE_LOCAL_FS === '1' ? false : false; // default to fs unless explicitly using MCP
+const DEFAULT_BASE_PATH = process.env.BASE_PATH || path.join(os.homedir(), 'backtrack-demo');
+let activeBasePath = path.normalize(DEFAULT_BASE_PATH);
+let useMCP = process.env.USE_LOCAL_FS === '1' ? false : false;
 
-/**
- * Get all indexed folders (scanned 2 levels deep)
- */
+const normalizeForCompare = (value: string) =>
+  path.normalize(value).replace(/[\\/]+$/, '').toLowerCase();
+
+const isWithinActiveBasePath = (inputPath: string): boolean => {
+  const normalizedInput = normalizeForCompare(inputPath);
+  const normalizedBase = normalizeForCompare(activeBasePath);
+  return normalizedInput === normalizedBase || normalizedInput.startsWith(`${normalizedBase}${path.sep}`);
+};
+
+const toFileMetadata = (fullPath: string, entryStats: fs.Stats): FileMetadata => ({
+  name: path.basename(fullPath),
+  path: fullPath,
+  size: entryStats.size,
+  extension: entryStats.isDirectory() ? '' : path.extname(fullPath).toLowerCase(),
+  modified: entryStats.mtime.toISOString(),
+  created: entryStats.birthtime.toISOString(),
+  isDirectory: entryStats.isDirectory(),
+});
+
 async function getIndexedFolders(): Promise<string[]> {
+  const folders: string[] = [];
+  const maxDepth = 2;
+
+  const scan = async (dirPath: string, depth: number): Promise<void> => {
+    if (depth > maxDepth) {
+      return;
+    }
+
+    if (!fs.existsSync(dirPath)) {
+      return;
+    }
+
+    folders.push(dirPath);
+    const entries = fs.readdirSync(dirPath, { withFileTypes: true });
+
+    for (const entry of entries) {
+      if (!entry.isDirectory()) {
+        continue;
+      }
+      await scan(path.join(dirPath, entry.name), depth + 1);
+    }
+  };
+
   try {
-    const indexer = await getFolderIndexer();
-    const folders = indexer.getItems()
-      .filter(item => item.isDirectory)
-      .map(item => item.fullPath);
-    console.log(`[Filesystem] Returning ${folders.length} indexed folders`);
+    await scan(activeBasePath, 0);
     return folders;
   } catch (error) {
-    console.error('[Filesystem] Error getting indexed folders:', error);
-    return [];
+    console.error('[Filesystem] Error building folder suggestions:', error);
+    return [activeBasePath];
   }
 }
 
-/**
- * Scan folder using MCP
- */
-async function scanFolderMCP(folderPath: string, recursive: boolean = false): Promise<ScanResult> {
+async function scanFolderMCP(folderPath: string, recursive = false): Promise<ScanResult> {
   try {
-    console.log(`[MCP Filesystem] Scanning: ${folderPath}`);
-
-    // Security check
     const normalizedPath = path.normalize(folderPath);
-    if (!normalizedPath.startsWith(BASE_PATH)) {
-      return { success: false, error: `Access denied: Can only scan folders within ${BASE_PATH}` };
+    if (!isWithinActiveBasePath(normalizedPath)) {
+      return {
+        success: false,
+        error: `Access denied: Can only scan folders within ${activeBasePath}`
+      };
     }
 
-    // Get MCP client
-    const mcpClient = await getMCPClient([BASE_PATH]);
-
-    // Read directory using MCP
-    const files = await mcpClient.readDirectory(folderPath, recursive);
-
-    // Detect server error text in response
-    const hasToolError = files.some((f) =>
-      typeof f.name === 'string' &&
-      f.name.toLowerCase().includes('read_directory') &&
-      f.name.toLowerCase().includes('not found')
-    );
-    if (hasToolError) {
-      throw new Error('MCP read_directory not available');
-    }
-
-    console.log(`[MCP Filesystem] Scanned ${files.length} files in ${folderPath}`);
+    const mcpClient = await getMCPClient([os.homedir()]);
+    const files = await mcpClient.readDirectory(normalizedPath, recursive);
     return { success: true, files };
-
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    console.error(`[MCP Filesystem] Error scanning folder: ${message}`);
-
-    // Fallback to fs if MCP tool is unavailable
-    if (message.includes('read_directory not found') || (message.includes('Tool') && message.includes('not found'))) {
-      console.warn('[MCP Filesystem] Falling back to Node fs scan due to missing MCP tool.');
-      return scanFolderFS(folderPath, recursive);
-    }
-
-    return { success: false, error: message };
+    console.error('[MCP Filesystem] Error scanning folder:', message);
+    return scanFolderFS(folderPath, recursive);
   }
 }
 
-/**
- * Scan folder using Node.js fs (fallback)
- */
-async function scanFolderFS(folderPath: string, recursive: boolean = false): Promise<ScanResult> {
+async function scanFolderFS(folderPath: string, recursive = false): Promise<ScanResult> {
   try {
-    // Resolve home directory shortcut
-    const resolvedPath = folderPath.startsWith('~')
-      ? path.join(BASE_PATH, folderPath.slice(1))
-      : folderPath;
-
-    // Security: Only allow scanning within backtrack-testing directory
-    const normalizedPath = path.normalize(resolvedPath);
-    if (!normalizedPath.startsWith(BASE_PATH)) {
-      return { success: false, error: `Access denied: Can only scan folders within ${BASE_PATH}` };
+    const normalizedPath = path.normalize(folderPath);
+    if (!isWithinActiveBasePath(normalizedPath)) {
+      return {
+        success: false,
+        error: `Access denied: Can only scan folders within ${activeBasePath}`
+      };
     }
 
-    if (!fs.existsSync(resolvedPath)) {
+    if (!fs.existsSync(normalizedPath)) {
       return { success: false, error: `Folder not found: ${folderPath}` };
     }
 
-    const stats = fs.statSync(resolvedPath);
+    const stats = fs.statSync(normalizedPath);
     if (!stats.isDirectory()) {
       return { success: false, error: `Not a directory: ${folderPath}` };
     }
 
     const files: FileMetadata[] = [];
 
-    async function scanDir(dirPath: string): Promise<void> {
+    const scan = async (dirPath: string): Promise<void> => {
       const entries = fs.readdirSync(dirPath, { withFileTypes: true });
-
       for (const entry of entries) {
         const fullPath = path.join(dirPath, entry.name);
-
         try {
           const entryStats = fs.statSync(fullPath);
+          files.push(toFileMetadata(fullPath, entryStats));
 
-          files.push({
-            name: entry.name,
-            path: fullPath,
-            size: entryStats.size,
-            extension: entry.isDirectory() ? '' : path.extname(entry.name).toLowerCase(),
-            modified: entryStats.mtime.toISOString(),
-            created: entryStats.birthtime.toISOString(),
-            isDirectory: entry.isDirectory(),
-          });
-
-          // Recursively scan subdirectories if requested
           if (recursive && entry.isDirectory()) {
-            await scanDir(fullPath);
+            await scan(fullPath);
           }
         } catch (err) {
-          // Skip files we can't access (permission errors, etc.)
-          console.warn(`Skipping ${fullPath}: ${err}`);
+          console.warn('[Filesystem] Skipping inaccessible item:', fullPath, err);
         }
       }
-    }
+    };
 
-    await scanDir(resolvedPath);
-
-    console.log(`[Filesystem] Scanned ${files.length} files in ${folderPath}`);
+    await scan(normalizedPath);
     return { success: true, files };
-
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    console.error(`[Filesystem] Error scanning folder: ${message}`);
     return { success: false, error: message };
   }
 }
 
-/**
- * Validate if a folder path exists
- */
 async function validateFolderPath(folderPath: string): Promise<ValidationResult> {
   try {
-    const resolvedPath = folderPath.startsWith('~')
-      ? path.join(BASE_PATH, folderPath.slice(1))
-      : folderPath;
-
-    if (!fs.existsSync(resolvedPath)) {
+    const normalizedPath = path.normalize(folderPath);
+    if (!fs.existsSync(normalizedPath)) {
       return { success: true, exists: false, isDirectory: false };
     }
 
-    const stats = fs.statSync(resolvedPath);
+    const stats = fs.statSync(normalizedPath);
     return {
       success: true,
       exists: true,
-      isDirectory: stats.isDirectory(),
+      isDirectory: stats.isDirectory()
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
@@ -187,62 +168,67 @@ async function validateFolderPath(folderPath: string): Promise<ValidationResult>
   }
 }
 
-/**
- * Register all filesystem IPC handlers
- */
+async function setActiveBasePath(folderPath: string) {
+  const normalizedPath = path.normalize(folderPath);
+  if (!fs.existsSync(normalizedPath)) {
+    return { success: false, message: 'Folder does not exist' };
+  }
+
+  const stats = fs.statSync(normalizedPath);
+  if (!stats.isDirectory()) {
+    return { success: false, message: 'Selected path is not a folder' };
+  }
+
+  activeBasePath = normalizedPath;
+  console.log('[Filesystem] Active base path set to:', activeBasePath);
+  return { success: true, path: activeBasePath, message: 'Folder scope updated' };
+}
+
 export function registerFilesystemHandlers(ipcMain: IpcMain): void {
-  // Initialize MCP client and folder indexer on startup
   (async () => {
-    if (process.env.USE_LOCAL_FS === '1') {
-      useMCP = false;
-      console.log('[Filesystem] USE_LOCAL_FS=1 -> using Node.js fs for all ops');
-    } else {
-      try {
-        const client = await getMCPClient([BASE_PATH]);
-        try {
-          await (client as any).readDirectory(BASE_PATH, false);
-          useMCP = true;
-          console.log('[Filesystem] MCP client initialized, using MCP for file operations');
-        } catch (probeError: any) {
-          console.warn('[Filesystem] MCP probe failed, falling back to Node.js fs:', probeError?.message || probeError);
-          useMCP = false;
-        }
-      } catch (error) {
-        console.warn('[Filesystem] MCP initialization failed, falling back to Node.js fs:', error);
-        useMCP = false;
+    try {
+      if (!fs.existsSync(activeBasePath)) {
+        fs.mkdirSync(activeBasePath, { recursive: true });
       }
+    } catch (error) {
+      console.warn('[Filesystem] Could not initialize active base path:', error);
     }
 
-    // Initialize folder indexer for autocomplete
+    if (process.env.USE_LOCAL_FS === '1') {
+      useMCP = false;
+      return;
+    }
+
     try {
-      await getFolderIndexer();
-      console.log('[Filesystem] Folder indexer initialized');
+      const client = await getMCPClient([os.homedir()]);
+      await (client as any).readDirectory(activeBasePath, false);
+      useMCP = true;
+      console.log('[Filesystem] MCP enabled for folder scans');
     } catch (error) {
-      console.error('[Filesystem] Folder indexer initialization failed:', error);
+      useMCP = false;
+      console.warn('[Filesystem] MCP unavailable, using local fs fallback:', error);
     }
   })();
 
-  // Scan folder handler
   ipcMain.handle('scan-folder', async (_event, folderPath: string, recursive?: boolean) => {
-    console.log(`[IPC] scan-folder: ${folderPath}, recursive: ${recursive}, using MCP: ${useMCP}`);
-
     if (useMCP) {
       return scanFolderMCP(folderPath, recursive ?? false);
-    } else {
-      return scanFolderFS(folderPath, recursive ?? false);
     }
+    return scanFolderFS(folderPath, recursive ?? false);
   });
 
-  // Get list of indexed folders for autocomplete (scanned 2 levels deep)
-  ipcMain.handle('get-folder-list', async () => {
-    console.log('[IPC] get-folder-list');
-    return await getIndexedFolders();
-  });
+  ipcMain.handle('get-folder-list', async () => getIndexedFolders());
 
-  // Validate folder path
   ipcMain.handle('validate-folder-path', async (_event, folderPath: string) => {
-    console.log(`[IPC] validate-folder-path: ${folderPath}`);
     return validateFolderPath(folderPath);
+  });
+
+  ipcMain.handle('set-active-base-path', async (_event, folderPath: string) => {
+    return setActiveBasePath(folderPath);
+  });
+
+  ipcMain.handle('get-active-base-path', async () => {
+    return activeBasePath;
   });
 
   console.log('[Filesystem] IPC handlers registered');

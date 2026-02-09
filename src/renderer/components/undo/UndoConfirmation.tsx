@@ -6,44 +6,33 @@ interface Props {
 }
 
 export default function UndoConfirmation({ onClose }: Props) {
-  const { executionId, description, timestamp, startUndo, completeUndo, disableUndo } =
-    useUndoStore.getState();
+  const { executionId, description, timestamp, startUndo, completeUndo, disableUndo } = useUndoStore.getState();
 
   const handleConfirm = async () => {
-    console.log('[UndoConfirmation] Confirm clicked');
     onClose();
     startUndo();
+
     try {
       let execId = executionId;
-      console.log('[UndoConfirmation] executionId from store:', execId);
-
       if (!execId && window.api?.getLatestExecution) {
-        console.log('[UndoConfirmation] Fetching latest execution...');
         const latest = await window.api.getLatestExecution();
         execId = latest?.execution?.execution_id;
-        console.log('[UndoConfirmation] Latest execution ID:', execId);
       }
 
       if (!execId) {
-        throw new Error('No execution available to undo');
+        throw new Error('No operation is available to undo yet.');
       }
 
-      console.log('[UndoConfirmation] Calling executeUndo with ID:', execId);
       const result = await window.api.executeUndo?.(execId);
-      console.log('[UndoConfirmation] Undo result:', result);
-
       if (result?.success) {
-        console.log('[UndoConfirmation] Undo succeeded');
         completeUndo();
       } else {
-        console.error('[UndoConfirmation] Undo failed:', result?.error);
         disableUndo();
-        alert(`Undo failed: ${result?.error || 'Unknown error'}`);
+        alert(result?.error || 'Undo could not be completed.');
       }
     } catch (error: any) {
-      console.error('[UndoConfirmation] Undo error:', error);
       disableUndo();
-      alert(`Undo failed: ${error?.message || 'Unknown error'}`);
+      alert(error?.message || 'Undo could not be completed.');
     }
   };
 
@@ -51,49 +40,39 @@ export default function UndoConfirmation({ onClose }: Props) {
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="fixed inset-0 z-[10001] flex items-center justify-center bg-black/50"
+      className="fixed inset-0 z-[10001] flex items-center justify-center bg-slate-900/45"
       onClick={onClose}
     >
       <motion.div
-        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+        initial={{ opacity: 0, scale: 0.92, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="max-w-md rounded-2xl bg-white p-8 shadow-2xl dark:bg-gray-900"
-        onClick={(e) => e.stopPropagation()}
+        className="max-w-md rounded-2xl border border-slate-200 bg-white p-7 shadow-2xl"
+        onClick={(event) => event.stopPropagation()}
       >
-        <h2 className="mb-4 text-2xl font-bold">Undo Execution?</h2>
+        <h2 className="mb-3 text-xl font-bold text-slate-900">Undo this organization?</h2>
 
-        <div className="mb-6">
-          <p className="mb-2 text-gray-600 dark:text-gray-400">
-            This will restore your files to the state before:
-          </p>
-          <div className="rounded-lg bg-gray-100 p-4 dark:bg-gray-800">
-            <p className="mb-2 font-medium text-gray-900 dark:text-white">"{description}"</p>
-            {timestamp && (
-              <p className="text-sm text-gray-500 dark:text-gray-400">
-                {new Date(timestamp).toLocaleString()}
-              </p>
-            )}
-          </div>
+        <div className="mb-6 rounded-xl border border-slate-200 bg-slate-50 p-4">
+          <p className="mb-1 text-sm text-slate-600">You are about to restore files from:</p>
+          <p className="font-medium text-slate-900">{description}</p>
+          {timestamp && <p className="mt-1 text-xs text-slate-500">{new Date(timestamp).toLocaleString()}</p>}
         </div>
 
-        <div className="mb-6 rounded-lg border border-green-200 bg-green-50 p-3 dark:border-green-800 dark:bg-green-900/20">
-          <p className="text-sm text-green-800 dark:text-green-300">
-            ✓ Guaranteed restoration - all changes will be reversed
-          </p>
+        <div className="mb-5 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700">
+          Safe restore enabled. Backtrack will reverse every recorded change in this execution.
         </div>
 
         <div className="flex gap-3">
           <button
             onClick={onClose}
-            className="flex-1 rounded-lg bg-gray-100 px-6 py-3 font-medium text-gray-900 transition hover:bg-gray-200 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700"
+            className="flex-1 rounded-lg border border-slate-300 px-5 py-2.5 font-medium text-slate-700 transition hover:bg-slate-100"
           >
             Cancel
           </button>
           <button
             onClick={handleConfirm}
-            className="flex-1 rounded-lg bg-orange-500 px-6 py-3 font-medium text-white transition hover:bg-orange-600"
+            className="flex-1 rounded-lg bg-amber-500 px-5 py-2.5 font-medium text-white transition hover:bg-amber-600"
           >
-            Yes, Undo
+            Undo Now
           </button>
         </div>
       </motion.div>

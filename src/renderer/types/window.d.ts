@@ -7,6 +7,10 @@ declare global {
       getFolderList: () => Promise<string[]>;
       scanFolder: (folderPath: string, recursive?: boolean) => Promise<any>;
       validateFolderPath: (folderPath: string) => Promise<any>;
+      setActiveBasePath: (folderPath: string) => Promise<{ success: boolean; path?: string; message: string }>;
+      getActiveBasePath: () => Promise<string>;
+      selectFolderDialog: () => Promise<{ success: boolean; cancelled?: boolean; path?: string; message: string }>;
+      setupDemoFolder: () => Promise<{ success: boolean; path?: string; message: string }>;
 
       // Intent + planning (F1/F2)
       parseIntent: (message: string, context: string) => Promise<any>;
