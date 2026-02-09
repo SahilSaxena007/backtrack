@@ -3,7 +3,8 @@ import { BrowserWindow } from 'electron';
 import { LedgerService, ExecutionRecord, ActionLog } from './ledger-service';
 import { BackupService } from './backup-service';
 import { TraceStore } from './trace-store';
-import { ModificationDetector, FileModification } from './modification-detector';
+import { ModificationDetector } from './modification-detector';
+import { FileModification } from '../../shared/types';
 
 /**
  * Main undo engine. Strategy: inverse ops first, then backup restore fallback.

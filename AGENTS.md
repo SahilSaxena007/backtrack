@@ -60,6 +60,8 @@
 - Guarded execution progress subscription for browser preview mode (window.api may be undefined).
 - Preview button label emphasized for clearer affordance.
 - Preview panel glassmorphism adjusted to match toast translucency; panel size reduced by 10%.
+- Fixed undo engine import to source `FileModification` from shared types (resolves TS2459).
+- Reordered startup to create main window before initializing execution engine, preventing "Main window not initialized" during dev:electron.
 
 ## Agent Workflow Notes
 
