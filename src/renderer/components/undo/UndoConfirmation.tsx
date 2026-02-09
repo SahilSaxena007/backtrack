@@ -13,7 +13,15 @@ export default function UndoConfirmation({ onClose }: Props) {
     onClose();
     startUndo();
     try {
-      const result = await window.api.executeUndo?.(executionId);
+      let execId = executionId;
+      if (!execId && window.api?.getLatestExecution) {
+        const latest = await window.api.getLatestExecution();
+        execId = latest?.execution?.execution_id;
+      }
+      if (!execId) {
+        throw new Error('No execution available to undo');
+      }
+      const result = await window.api.executeUndo?.(execId);
       if (result?.success) {
         completeUndo();
       } else {

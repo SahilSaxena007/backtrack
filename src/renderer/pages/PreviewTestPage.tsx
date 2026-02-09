@@ -7,6 +7,7 @@
 
 import { useState } from 'react';
 import { usePreviewStore, PreviewMode } from '../store/previewStore';
+import { useUndoStore } from '../store/undoStore';
 import { PreviewButton } from '../components/preview/PreviewButton';
 import type { F2_to_F3_Input } from '@shared/types';
 
@@ -203,6 +204,7 @@ const MOCK_PLANS: Record<string, F2_to_F3_Input> = {
 
 export function PreviewTestPage() {
   const { mode, plan, showToast, showPanel, showButton, cancelPlan } = usePreviewStore();
+  const enableUndo = useUndoStore((s) => s.enableUndo);
   const [selectedPlan, setSelectedPlan] = useState<'safe' | 'risky'>('safe');
 
   const handleShowToast = () => {
@@ -302,7 +304,22 @@ export function PreviewTestPage() {
                   Hide All
                 </button>
                 <button
-                  onClick={() => window.api.runDemoExecution?.()}
+                  onClick={() => {
+                    window.api.runDemoExecution?.().then((res: any) => {
+                      if (res?.success && window.api?.getLatestExecution) {
+                        window.api.getLatestExecution().then((latest: any) => {
+                          if (latest?.success && latest.execution) {
+                            enableUndo({
+                              execution_id: latest.execution.execution_id,
+                              description: latest.execution.description || 'File organization',
+                              completed_at:
+                                latest.execution.completed_at || new Date().toISOString(),
+                            });
+                          }
+                        });
+                      }
+                    });
+                  }}
                   className="col-span-2 px-4 py-2 rounded-lg bg-emerald-500 text-white font-semibold hover:bg-emerald-600 transition"
                 >
                   Run F5 Demo Execution
