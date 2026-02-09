@@ -10,6 +10,7 @@
     "build": "tsc -p tsconfig.main.json && vite build && electron-builder",
     "build:main": "tsc -p tsconfig.main.json",
     "lint": "tsc --noEmit",
+    "verify": "npm run lint && npm run build:main",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
