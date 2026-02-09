@@ -16,6 +16,13 @@ declare global {
       // Preview (F3)
       requestPlanModification: (plan: any) => Promise<any>;
       cancelPlan: () => Promise<any>;
+      presentPreviewPlan: (plan: any) => Promise<any>;
+      togglePreviewWorkspace: () => Promise<any>;
+      showPreviewWorkspace: () => Promise<any>;
+      hidePreviewWorkspace: () => Promise<any>;
+      isPreviewWorkspaceOpen: () => Promise<boolean>;
+      clearPreviewPlan: () => Promise<{ success: boolean }>;
+      onPreviewWorkspaceEvent: (callback: (event: any) => void) => () => void;
 
       // Execution (F5)
       runExecution: (approvedPlan: any) => Promise<any>;

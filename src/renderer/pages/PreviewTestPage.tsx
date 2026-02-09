@@ -15,6 +15,9 @@ import type { F2_to_F3_Input } from '@shared/types';
 const MOCK_PLANS: Record<string, F2_to_F3_Input> = {
   safe: {
     plan_id: 'plan_test_001',
+    target_folder: 'C:\\Downloads',
+    user_intent: 'Organize Downloads folder by file type',
+    conversation_id: 'preview_test_safe',
     actions: [
       {
         id: 'a1',
@@ -123,6 +126,9 @@ const MOCK_PLANS: Record<string, F2_to_F3_Input> = {
   },
   risky: {
     plan_id: 'plan_test_002',
+    target_folder: 'C:\\Downloads',
+    user_intent: 'Move archive files into a separate folder',
+    conversation_id: 'preview_test_risky',
     actions: [
       {
         id: 'a1',

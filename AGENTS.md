@@ -14,7 +14,8 @@
   - `#/control-panel` -> `MainControlPage` (600x400, entry point).
   - `#/floating-button` -> `FloatingButtonPage` (100x100, always-on-top overlay).
   - `#/chat-drawer` -> `ChatDrawerPage` (400x600, slides in left of button).
-- Windows are created/destroyed via IPC (`deploy-floating-button`, `hide-floating-button`).
+  - `#/preview-workspace` -> `PreviewWorkspacePage` (dedicated centered preview/undo workspace window).
+- Windows are created/destroyed via IPC (`deploy-floating-button`, `hide-floating-button`, preview workspace show/hide handlers).
 - Hash-based routing in `src/renderer/App.tsx` (no React Router).
 - IPC uses typed preload bridge (`src/main/preload.ts`): renderer calls `window.api.*`.
 - File operations must go through MCP (`src/main/services/mcp-client.ts`); allowed paths live in `src/main/ipc/filesystem-handlers.ts`.
@@ -71,6 +72,9 @@
 - Preview toast/panel now portal to body with high z-index so previews appear overlayed (not trapped in chat).
 - Planning tightened: hard guards in prompt, path-boundary validation rejects plans outside target or recreating target folder; target existence checked via MCP before planning.
 - Added execution progress logging in renderer to observe stuck-progress issues.
+- Preview/undo UI has been decoupled from chat drawer into a dedicated preview workspace window centered on the active monitor work area.
+- Chat drawer now includes a mini eye toggle button to open/close the preview workspace independently.
+- New plan previews ask for confirmation before replacing an already-visible preview workspace session.
 
 ## Agent Workflow Notes
 

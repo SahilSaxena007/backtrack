@@ -20,7 +20,7 @@ Backtrack is an Electron desktop application for AI-powered file organization, b
 
 ### Multi-Window System (Wisprflow-style)
 
-The app uses **three separate Electron windows**, not a traditional single-window app:
+The app uses **four separate Electron windows**, not a traditional single-window app:
 
 1. **Main Control Panel** (`MainControlPage`) - 600x400px
    - Entry point when app launches
@@ -38,6 +38,12 @@ The app uses **three separate Electron windows**, not a traditional single-windo
    - Semi-transparent (`bg-white/90`) with backdrop blur
    - Slides in from left with Framer Motion
    - Loads at `http://localhost:5173/#/chat-drawer`
+
+4. **Preview Workspace** (`PreviewWorkspacePage`) - centered dedicated preview window
+   - Separate window for preview panel, before/after tree, execution progress, and undo UI
+   - Opened only when a plan is ready or user toggles it from chat
+   - Asks user confirmation before replacing an active preview with a newly generated plan
+   - Loads at `http://localhost:5173/#/preview-workspace`
 
 **Critical**: Windows are created/destroyed dynamically via IPC handlers (`deploy-floating-button`, `hide-floating-button`). When control panel closes, all windows close.
 
@@ -94,6 +100,7 @@ Uses **hash-based routing** (not React Router):
 #/control-panel → MainControlPage
 #/floating-button → FloatingButtonPage
 #/chat-drawer → ChatDrawerPage
+#/preview-workspace → PreviewWorkspacePage
 ```
 
 Each Electron window loads a different hash. Change routing logic in `src/renderer/App.tsx`.
@@ -188,6 +195,7 @@ Current status: **Tasks 3-8 complete + Task 9 (folder scanning) partial**
 - ✅ F5 Hour 5 Task 9: service initialization in main
 - ✅ F5 Hour 5 Tasks 10-11: renderer execution wiring + F3 triggers F5
 - ✅ F5 Demo: preview test page triggers execution via BASE_PATH
+- ✅ Dedicated preview workspace window: preview/undo UI moved out of chat drawer and controlled via IPC + chat mini toggle
 
 **Next:**
 

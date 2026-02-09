@@ -1,8 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Settings, FolderOpen } from 'lucide-react';
+import { Send, Settings, FolderOpen, Eye, EyeOff } from 'lucide-react';
 import { useConversationStore } from '../store/conversationStore';
-import ProgressOverlay from '../components/execution/ProgressOverlay';
 import Fuse from 'fuse.js';
 
 export function ChatDrawerPage() {
@@ -11,6 +10,7 @@ export function ChatDrawerPage() {
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(0);
   const [fuse, setFuse] = useState<Fuse<string> | null>(null);
+  const [isPreviewWorkspaceOpen, setIsPreviewWorkspaceOpen] = useState(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -45,6 +45,41 @@ export function ChatDrawerPage() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isLoading]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const syncPreviewWorkspaceState = async () => {
+      try {
+        const isOpen = await window.api.isPreviewWorkspaceOpen();
+        if (!cancelled) {
+          setIsPreviewWorkspaceOpen(isOpen);
+        }
+      } catch (error) {
+        console.error('[ChatDrawer] Failed to read preview workspace visibility:', error);
+      }
+    };
+
+    void syncPreviewWorkspaceState();
+    const interval = setInterval(syncPreviewWorkspaceState, 500);
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, []);
+
+  const handleTogglePreviewWorkspace = async () => {
+    const result = await window.api.togglePreviewWorkspace();
+    if (result.success) {
+      setIsPreviewWorkspaceOpen(Boolean(result.visible));
+      return;
+    }
+
+    if (result.message) {
+      addAssistantMessage(`Preview workspace: ${result.message}`);
+    }
+  };
 
   // Auto-resize textarea as user types and trigger autocomplete
   const handleInput = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
@@ -255,9 +290,15 @@ _Clarity Score: ${(intent.clarityScore * 100).toFixed(0)}%_`;
           }
 
           // ---- F3: Preview ----
-          addAssistantMessage('✅ Plan ready! Opening preview...');
-          const { usePreviewStore } = await import('../store/previewStore');
-          usePreviewStore.getState().showToast(planResult.plan);
+          addAssistantMessage('✅ Plan ready! Opening preview workspace...');
+          const previewResult = await window.api.presentPreviewPlan(planResult.plan);
+          if (previewResult.success) {
+            setIsPreviewWorkspaceOpen(Boolean(previewResult.visible));
+          } else if (previewResult.cancelled) {
+            addAssistantMessage('Kept the current preview window open. New preview was not replaced.');
+          } else if (previewResult.message) {
+            addAssistantMessage(`Preview workspace error: ${previewResult.message}`);
+          }
         } catch (planningError) {
           console.error('[ChatDrawer] Planning error:', planningError);
           addAssistantMessage('⚠️ Planning engine encountered an error. Please try again.');
@@ -413,6 +454,17 @@ _Clarity Score: ${(intent.clarityScore * 100).toFixed(0)}%_`;
               title="Settings (coming soon)"
             >
               <Settings className="w-4 h-4 text-gray-600" />
+            </button>
+            <button
+              onClick={handleTogglePreviewWorkspace}
+              className="w-7 h-7 rounded-lg hover:bg-gray-200 flex items-center justify-center transition-colors"
+              title={isPreviewWorkspaceOpen ? 'Hide preview workspace' : 'Show preview workspace'}
+            >
+              {isPreviewWorkspaceOpen ? (
+                <EyeOff className="w-4 h-4 text-gray-600" />
+              ) : (
+                <Eye className="w-4 h-4 text-gray-600" />
+              )}
             </button>
             <button
               onClick={handleClose}
@@ -628,9 +680,6 @@ _Clarity Score: ${(intent.clarityScore * 100).toFixed(0)}%_`;
           background: #94a3b8;
         }
       `}</style>
-
-      {/* Execution progress overlay */}
-      <ProgressOverlay />
     </div>
   );
 }

@@ -1,4 +1,13 @@
 # Implementation Plan: F3 - Visual Diff Preview
+
+## Post-Completion Update (2026-02-09)
+
+- [x] Added a dedicated `preview-workspace` Electron window route and lifecycle in `src/main/main.ts`.
+- [x] Moved preview/diff/undo rendering out of `chat-drawer` route into the new `preview-workspace` route in `src/renderer/App.tsx`.
+- [x] Added preview workspace IPC APIs (`present-preview-plan`, `toggle/show/hide/is-open`, `clear-preview-plan`) and preload/type wiring.
+- [x] Added chat-drawer mini eye toggle button to independently open/close preview workspace.
+- [x] Added replacement confirmation prompt when a new plan arrives while preview workspace is already visible.
+- [x] Verified with `npm run lint` (TypeScript `--noEmit`) after updates.
 **Backtrack Desktop App - Gemini 3 Hackathon**
 
 **Timeline:** Day 4 Morning (4 hours)  

@@ -3,6 +3,7 @@ import { MainControlPage } from './pages/MainControlPage';
 import { FloatingButtonPage } from './pages/FloatingButtonPage';
 import { ChatDrawerPage } from './pages/ChatDrawerPage';
 import { PreviewTestPage } from './pages/PreviewTestPage';
+import { PreviewWorkspacePage } from './pages/PreviewWorkspacePage';
 import { PreviewToast } from './components/preview/PreviewToast';
 import { PreviewPanel } from './components/preview/PreviewPanel';
 import { PreviewButton } from './components/preview/PreviewButton';
@@ -21,13 +22,12 @@ function App() {
   const { showToast, plan } = usePreviewStore();
   const updateExecution = useExecutionStore((s) => s.updateProgress);
   const enableUndo = useUndoStore((s) => s.enableUndo);
+  const isPreviewSurfacePage = currentPage === 'preview-workspace' || currentPage === 'preview-test';
 
   useEffect(() => {
-    // Determine which page to show based on URL hash
     const hash = window.location.hash.replace('#/', '');
     setCurrentPage(hash || 'control-panel');
 
-    // Listen for hash changes
     const handleHashChange = () => {
       const newHash = window.location.hash.replace('#/', '');
       setCurrentPage(newHash || 'control-panel');
@@ -35,6 +35,46 @@ function App() {
 
     window.addEventListener('hashchange', handleHashChange);
     return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
+
+  useEffect(() => {
+    if (!window.api?.onPreviewWorkspaceEvent) {
+      return;
+    }
+
+    const unsubscribe = window.api.onPreviewWorkspaceEvent((event: any) => {
+      if (!event?.type) {
+        return;
+      }
+
+      const previewStore = usePreviewStore.getState();
+
+      if (event.type === 'present-plan' && event.plan) {
+        previewStore.showToast(event.plan);
+        if (event.mode === 'panel') {
+          previewStore.showPanel();
+        } else if (event.mode === 'button') {
+          previewStore.showButton();
+        }
+        return;
+      }
+
+      if (event.type === 'set-mode') {
+        if (event.mode === 'panel') {
+          previewStore.showPanel();
+        } else if (event.mode === 'button') {
+          previewStore.showButton();
+        } else if (event.mode === 'toast' && previewStore.plan) {
+          previewStore.showToast(previewStore.plan);
+        }
+      }
+    });
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -52,122 +92,108 @@ function App() {
   }, [plan, showToast]);
 
   useEffect(() => {
-    if (!window.api?.onExecutionProgress) {
+    if (!isPreviewSurfacePage || !window.api?.onExecutionProgress) {
       return;
     }
+
     const unsubscribe = window.api.onExecutionProgress((progress: any) => {
       console.log('[ExecutionProgress]', progress);
       updateExecution(progress);
       if (progress?.status === 'success' && window.api?.getLatestExecution) {
-        console.log('[App] Execution success! Fetching latest execution for undo...');
         window.api.getLatestExecution().then((res: any) => {
-          console.log('[App] getLatestExecution result:', res);
           if (res?.success && res.execution) {
-            console.log('[App] Enabling undo with execution_id:', res.execution.execution_id);
             enableUndo({
               execution_id: res.execution.execution_id,
               description: res.execution.description || 'File organization',
               completed_at: res.execution.completed_at || new Date().toISOString(),
             });
-            console.log('[App] enableUndo called');
-          } else {
-            console.log('[App] Cannot enable undo - no execution data');
           }
         });
       }
     });
+
     return () => {
-      if (unsubscribe) unsubscribe();
+      if (unsubscribe) {
+        unsubscribe();
+      }
     };
-  }, [updateExecution, enableUndo]);
+  }, [isPreviewSurfacePage, updateExecution, enableUndo]);
 
   useEffect(() => {
-    if (!window.api?.onModificationWarning) return;
-    const unsub = window.api.onModificationWarning((mods: FileModification[]) => {
-      console.log('[App] Modification warning received:', mods.length, 'modifications');
-      setModifications(mods);
-      console.log('[App] Modifications state updated, modal should appear');
-    });
-    return () => {
-      if (unsub) unsub();
-    };
-  }, []);
+    if (!isPreviewSurfacePage || !window.api?.onModificationWarning) {
+      return;
+    }
 
-  // Route to the appropriate page
-  if (currentPage === 'control-panel') {
+    const unsubscribe = window.api.onModificationWarning((mods: FileModification[]) => {
+      setModifications(mods);
+    });
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, [isPreviewSurfacePage]);
+
+  const renderModificationWarning = () => {
+    if (!modifications) {
+      return null;
+    }
     return (
-      <>
-        <MainControlPage />
-        <PreviewToast />
-        <PreviewPanel />
-        <PreviewButton />
-        <ProgressOverlay />
-        <UndoButton />
-        <UndoProgress />
-        {modifications && (
-          <ModificationWarning
-            modifications={modifications}
-            onCancel={() => {
-              window.api.sendModificationDecision(false);
-              setModifications(null);
-            }}
-            onUndoAnyway={() => {
-              window.api.sendModificationDecision(true);
-              setModifications(null);
-            }}
-            onViewDetails={() => {
-              alert(modifications.map((m) => `${m.type.toUpperCase()}: ${m.path} (${m.message})`).join('\n'));
-            }}
-          />
-        )}
-      </>
+      <ModificationWarning
+        modifications={modifications}
+        onCancel={() => {
+          window.api.sendModificationDecision(false);
+          setModifications(null);
+        }}
+        onUndoAnyway={() => {
+          window.api.sendModificationDecision(true);
+          setModifications(null);
+        }}
+        onViewDetails={() => {
+          alert(modifications.map((m) => `${m.type.toUpperCase()}: ${m.path} (${m.message})`).join('\n'));
+        }}
+      />
     );
+  };
+
+  const renderPreviewSurfaceUI = () => (
+    <>
+      <PreviewToast />
+      <PreviewPanel />
+      <PreviewButton />
+      <ProgressOverlay />
+      <UndoButton />
+      <UndoProgress />
+      {renderModificationWarning()}
+    </>
+  );
+
+  if (currentPage === 'control-panel') {
+    return <MainControlPage />;
   }
 
   if (currentPage === 'floating-button') {
     return (
-      <>
-        <div className="w-screen h-screen bg-transparent">
-          <FloatingButtonPage />
-        </div>
-        <PreviewToast />
-        <PreviewPanel />
-        <PreviewButton />
-        <ProgressOverlay />
-        <UndoButton />
-        <UndoProgress />
-      </>
+      <div className="w-screen h-screen bg-transparent">
+        <FloatingButtonPage />
+      </div>
     );
   }
 
   if (currentPage === 'chat-drawer') {
     return (
+      <div className="w-screen h-screen bg-transparent">
+        <ChatDrawerPage />
+      </div>
+    );
+  }
+
+  if (currentPage === 'preview-workspace') {
+    return (
       <>
-        <div className="w-screen h-screen bg-transparent">
-          <ChatDrawerPage />
-        </div>
-        <PreviewToast />
-        <PreviewPanel />
-        <PreviewButton />
-        <ProgressOverlay />
-        <UndoButton />
-        <UndoProgress />
-        {modifications && (
-          <ModificationWarning
-            modifications={modifications}
-            onCancel={() => {
-              window.api.sendModificationDecision(false);
-              setModifications(null);
-            }}
-            onUndoAnyway={() => {
-              window.api.sendModificationDecision(true);
-              setModifications(null);
-            }}
-            onViewDetails={() => {
-              alert(modifications.map((m) => `${m.type.toUpperCase()}: ${m.path} (${m.message})`).join('\n'));
-            }}
-          />
-        )}
+        <PreviewWorkspacePage />
+        {renderPreviewSurfaceUI()}
       </>
     );
   }
@@ -176,52 +202,15 @@ function App() {
     return (
       <>
         <PreviewTestPage />
-        <PreviewToast />
-        <PreviewPanel />
-        <PreviewButton />
-        <ProgressOverlay />
-        <UndoButton />
-        <UndoProgress />
+        {renderPreviewSurfaceUI()}
       </>
     );
   }
 
-  // Default fallback
   return (
-    <>
-      <div className="w-screen h-screen flex items-center justify-center bg-gray-100">
-        <p className="text-gray-600">Unknown page: {currentPage}</p>
-      </div>
-      <PreviewToast />
-      <PreviewPanel />
-      <PreviewButton />
-      <ProgressOverlay />
-      <UndoButton />
-      <UndoProgress />
-      {(() => {
-        console.log('[App] Render check - modifications:', modifications ? `${modifications.length} items` : 'null');
-        return modifications ? (
-          <ModificationWarning
-            modifications={modifications}
-          onCancel={() => {
-            window.api.sendModificationDecision(false);
-            setModifications(null);
-          }}
-          onUndoAnyway={() => {
-            window.api.sendModificationDecision(true);
-            setModifications(null);
-          }}
-          onViewDetails={() => {
-            alert(
-              modifications
-                .map((m) => `${m.type.toUpperCase()}: ${m.path} (${m.message})`)
-                .join('\n')
-            );
-          }}
-        />
-        ) : null;
-      })()}
-    </>
+    <div className="w-screen h-screen flex items-center justify-center bg-gray-100">
+      <p className="text-gray-600">Unknown page: {currentPage}</p>
+    </div>
   );
 }
 

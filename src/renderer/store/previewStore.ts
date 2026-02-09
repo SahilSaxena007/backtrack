@@ -106,7 +106,17 @@ export const usePreviewStore = create<PreviewStore>((set, get) => ({
     if (api?.requestPlanModification && get().plan) {
       void api.requestPlanModification(get().plan);
     }
-    set({ mode: 'hidden' });
+    if (api?.clearPreviewPlan) {
+      void api.clearPreviewPlan();
+    }
+    if (api?.hidePreviewWorkspace) {
+      void api.hidePreviewWorkspace();
+    }
+    set({
+      mode: 'hidden',
+      plan: null,
+      expandedFolders: new Set<string>()
+    });
   },
 
   cancelPlan: () => {
@@ -114,6 +124,16 @@ export const usePreviewStore = create<PreviewStore>((set, get) => ({
     if (api?.cancelPlan) {
       void api.cancelPlan();
     }
-    set({ mode: 'hidden' });
+    if (api?.clearPreviewPlan) {
+      void api.clearPreviewPlan();
+    }
+    if (api?.hidePreviewWorkspace) {
+      void api.hidePreviewWorkspace();
+    }
+    set({
+      mode: 'hidden',
+      plan: null,
+      expandedFolders: new Set<string>()
+    });
   }
 }));

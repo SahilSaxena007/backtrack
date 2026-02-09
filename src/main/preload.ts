@@ -31,6 +31,23 @@ const api = {
     ipcRenderer.invoke('request-plan-modification', plan),
   cancelPlan: (): Promise<PreviewActionResult> =>
     ipcRenderer.invoke('cancel-plan'),
+  presentPreviewPlan: (plan: PlanResult['plan']): Promise<PreviewWorkspaceResult> =>
+    ipcRenderer.invoke('present-preview-plan', plan),
+  togglePreviewWorkspace: (): Promise<PreviewWorkspaceResult> =>
+    ipcRenderer.invoke('toggle-preview-workspace'),
+  showPreviewWorkspace: (): Promise<PreviewWorkspaceResult> =>
+    ipcRenderer.invoke('show-preview-workspace'),
+  hidePreviewWorkspace: (): Promise<PreviewWorkspaceResult> =>
+    ipcRenderer.invoke('hide-preview-workspace'),
+  isPreviewWorkspaceOpen: (): Promise<boolean> =>
+    ipcRenderer.invoke('is-preview-workspace-open'),
+  clearPreviewPlan: (): Promise<{ success: boolean }> =>
+    ipcRenderer.invoke('clear-preview-plan'),
+  onPreviewWorkspaceEvent: (callback: (event: PreviewWorkspaceEvent) => void) => {
+    const handler = (_event: any, data: PreviewWorkspaceEvent) => callback(data);
+    ipcRenderer.on('preview-workspace-event', handler);
+    return () => ipcRenderer.removeListener('preview-workspace-event', handler);
+  },
 
   // Execution (F5)
   runExecution: (approvedPlan: any) => ipcRenderer.invoke('execute-plan', approvedPlan),
@@ -163,6 +180,19 @@ interface PlanResult {
 interface PreviewActionResult {
   success: boolean;
   message: string;
+}
+
+interface PreviewWorkspaceResult {
+  success: boolean;
+  visible?: boolean;
+  cancelled?: boolean;
+  message: string;
+}
+
+interface PreviewWorkspaceEvent {
+  type: 'present-plan' | 'set-mode';
+  plan?: PlanResult['plan'];
+  mode?: 'toast' | 'panel' | 'button';
 }
 
 // Expose the API to the renderer process
