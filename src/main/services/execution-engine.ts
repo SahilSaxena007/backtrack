@@ -130,10 +130,19 @@ export class ExecutionEngine {
       case 'move_files_batch': {
         const { files, source_folder, source, destination } = action.params;
         const sourceRoot = source_folder || source;
-        for (const file of files) {
+        console.log(`[ExecutionEngine] move_files_batch: source="${sourceRoot}", dest="${destination}", files:`, files);
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
           const sourcePath = path.join(sourceRoot, file);
           const dest = path.join(destination, file);
-          await this.mcpClient.callTool('move_file', { source: sourcePath, destination: dest });
+          console.log(`[ExecutionEngine] Moving file ${i+1}/${files.length}: "${sourcePath}" -> "${dest}"`);
+          try {
+            await this.mcpClient.callTool('move_file', { source: sourcePath, destination: dest });
+            console.log(`[ExecutionEngine] ✓ Moved: ${file}`);
+          } catch (err: any) {
+            console.error(`[ExecutionEngine] ✗ Failed to move ${file}:`, err.message);
+            throw err;
+          }
         }
         break;
       }
@@ -171,6 +180,48 @@ export class ExecutionEngine {
         }
         break;
       }
+      case 'move_files_batch': {
+        const { files, source_folder, source, destination } = action.params;
+        const sourceRoot = source_folder || source;
+
+        console.log(`[ExecutionEngine] Verifying pre-conditions for move_files_batch`);
+        console.log(`[ExecutionEngine]   action.params:`, JSON.stringify(action.params, null, 2));
+        console.log(`[ExecutionEngine]   Source root: ${sourceRoot}`);
+        console.log(`[ExecutionEngine]   Destination: ${destination}`);
+        console.log(`[ExecutionEngine]   Files: ${files}`);
+
+        // Validate required parameters exist
+        if (!sourceRoot || sourceRoot.trim() === '') {
+          throw new Error(`move_files_batch missing source parameter. Params: ${JSON.stringify(action.params)}`);
+        }
+        if (!destination || destination.trim() === '') {
+          throw new Error(`move_files_batch missing destination parameter. Params: ${JSON.stringify(action.params)}`);
+        }
+        if (!files || !Array.isArray(files) || files.length === 0) {
+          throw new Error(`move_files_batch missing or empty files array. Params: ${JSON.stringify(action.params)}`);
+        }
+
+        // Check source root exists
+        if (!(await this.mcpClient.pathExists(sourceRoot))) {
+          throw new Error(`Source folder does not exist: ${sourceRoot}`);
+        }
+
+        // Check each source file exists
+        for (const file of files) {
+          const sourcePath = path.join(sourceRoot, file);
+          if (!(await this.mcpClient.pathExists(sourcePath))) {
+            throw new Error(`Source file not found: ${sourcePath}`);
+          }
+        }
+
+        // Check destination exists
+        if (!(await this.mcpClient.pathExists(destination))) {
+          throw new Error(`Destination folder does not exist: ${destination}`);
+        }
+
+        console.log(`[ExecutionEngine] ✓ Pre-conditions verified for move_files_batch`);
+        break;
+      }
     }
   }
 
@@ -190,6 +241,22 @@ export class ExecutionEngine {
         if (!(await this.mcpClient.pathExists(dest))) {
           throw new Error(`Destination missing: ${dest}`);
         }
+        break;
+      }
+      case 'move_files_batch': {
+        const { files, destination } = action.params;
+
+        console.log(`[ExecutionEngine] Verifying post-conditions for move_files_batch`);
+
+        // Check each file now exists at destination
+        for (const file of files) {
+          const destPath = path.join(destination, file);
+          if (!(await this.mcpClient.pathExists(destPath))) {
+            throw new Error(`File not moved to destination: ${destPath}`);
+          }
+        }
+
+        console.log(`[ExecutionEngine] ✓ Post-conditions verified for move_files_batch`);
         break;
       }
     }
@@ -270,7 +337,15 @@ export class ExecutionEngine {
   }
 
   private sendProgress(progress: ProgressUpdate): void {
+    // Send to main window
     this.mainWindow.webContents.send('execution-progress', progress);
+
+    // Also broadcast to all other windows (chat drawer, floating button, etc.)
+    BrowserWindow.getAllWindows().forEach((win) => {
+      if (win !== this.mainWindow && !win.isDestroyed()) {
+        win.webContents.send('execution-progress', progress);
+      }
+    });
   }
 
   private generateExecutionId(): string {

@@ -116,6 +116,9 @@ export interface UndoPlan {
 
 export interface F2_to_F3_Input {
   plan_id: string;
+  target_folder: string;
+  user_intent: string;
+  conversation_id: string;
   actions: Action[];
   undo_plan: UndoPlan;
   safety_analysis: SafetyReport;

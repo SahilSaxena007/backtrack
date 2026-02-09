@@ -171,6 +171,9 @@ export interface UndoGenerationResult {
  */
 export interface CompletePlanOutput {
   plan_id: string;
+  target_folder: string;
+  user_intent: string;
+  conversation_id: string;
   actions: Action[];
   undo_plan: UndoPlan;
   safety_analysis: SafetyReport;
@@ -502,6 +505,8 @@ Based on the user intent "${input.userIntent}", create a complete, safe, and eff
     if (action.type === 'move_files_batch') {
       const params = action.params as any;
 
+      console.log(`[PlanningEngine] Auto-fix input for ${action.id}:`, JSON.stringify(params, null, 2));
+
       // Step 1: Normalize field names (Gemini uses inconsistent names)
       // Handle: source_paths, file_paths, files
       const fileArray = params.source_paths || params.file_paths || params.files;
@@ -515,6 +520,8 @@ Based on the user intent "${input.userIntent}", create a complete, safe, and eff
       }
 
       const firstFile = fileArray[0] as string;
+      console.log(`[PlanningEngine] ${action.id}: firstFile="${firstFile}"`);
+      console.log(`[PlanningEngine] ${action.id}: has source=${!!params.source}, has source_folder=${!!params.source_folder}`);
 
       // Step 2: Check if files contain full paths (has drive letter or starts with /)
       if (firstFile.match(/^[A-Z]:\\/i) || firstFile.startsWith('/')) {
@@ -559,6 +566,23 @@ Based on the user intent "${input.userIntent}", create a complete, safe, and eff
         delete params.destination_folder;
         delete params.destination_path;
         console.log(`[PlanningEngine] Auto-fixed ${action.id}: normalized destination="${destFolder}"`);
+      }
+
+      // Step 7: Final validation - ensure required fields exist after auto-fix
+      const finalSource = params.source_folder || params.source;
+      const finalDest = params.destination;
+      const finalFiles = params.files;
+
+      console.log(`[PlanningEngine] Auto-fix output for ${action.id}:`, JSON.stringify(params, null, 2));
+
+      if (!finalSource || finalSource.trim() === '') {
+        throw new Error(`${action.id}: move_files_batch missing source after auto-fix. Original params: ${JSON.stringify(params)}`);
+      }
+      if (!finalDest || finalDest.trim() === '') {
+        throw new Error(`${action.id}: move_files_batch missing destination after auto-fix. Original params: ${JSON.stringify(params)}`);
+      }
+      if (!finalFiles || !Array.isArray(finalFiles) || finalFiles.length === 0) {
+        throw new Error(`${action.id}: move_files_batch missing files array after auto-fix. Original params: ${JSON.stringify(params)}`);
       }
     }
   }
@@ -1401,6 +1425,9 @@ Return an improved undo plan in JSON format. If the deterministic plan is perfec
     // Build complete output
     return {
       plan_id: stage1.plan.plan_id,
+      target_folder: input.targetFolder,
+      user_intent: input.userIntent,
+      conversation_id: input.conversationId,
       actions: stage1.plan.actions,
       undo_plan: stage3.undo_plan,
       safety_analysis: stage2.safety_report,

@@ -6,10 +6,15 @@ import { executionEngine } from '../main';
  */
 export function registerExecutionHandlers(): void {
   ipcMain.handle('execute-plan', async (_event, approvedPlan) => {
+    console.log('[IPC] execute-plan called');
+    console.log('[IPC] Plan:', JSON.stringify(approvedPlan, null, 2));
     try {
       const result = await executionEngine.executePlan(approvedPlan);
+      console.log('[IPC] execute-plan SUCCESS:', result);
       return { success: true, result };
     } catch (error: any) {
+      console.error('[IPC] execute-plan FAILED:', error);
+      console.error('[IPC] Error stack:', error?.stack);
       return { success: false, error: error?.message || 'Execution failed' };
     }
   });

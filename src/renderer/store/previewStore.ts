@@ -84,14 +84,11 @@ export const usePreviewStore = create<PreviewStore>((set, get) => ({
       // Map F3 plan to execution-approved shape
       const approvedPlan = {
         plan_id: plan.plan_id,
-        user_intent: (plan as any).user_intent || 'unknown',
-        conversation_id: (plan as any).conversation_id || '',
-        target_folder: (plan as any).target_folder || '',
+        user_intent: plan.user_intent,
+        conversation_id: plan.conversation_id,
+        target_folder: plan.target_folder,
         actions: plan.actions,
         summary: plan.summary,
-        gemini_prompt: (plan as any).gemini_prompt,
-        gemini_response: (plan as any).gemini_response,
-        thinking_signatures: (plan as any).thinking_signatures,
       };
       // Optimistically set preparing state
       useExecutionStore.getState().updateProgress({

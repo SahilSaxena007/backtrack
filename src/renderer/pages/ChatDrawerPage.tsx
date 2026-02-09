@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Settings, FolderOpen } from 'lucide-react';
 import { useConversationStore } from '../store/conversationStore';
+import ProgressOverlay from '../components/execution/ProgressOverlay';
 import Fuse from 'fuse.js';
 
 export function ChatDrawerPage() {
@@ -627,6 +628,9 @@ _Clarity Score: ${(intent.clarityScore * 100).toFixed(0)}%_`;
           background: #94a3b8;
         }
       `}</style>
+
+      {/* Execution progress overlay */}
+      <ProgressOverlay />
     </div>
   );
 }
