@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { ChevronRight, ChevronsDown, ChevronsUp, Shield, X } from 'lucide-react';
 import { usePreviewStore } from '../../store/previewStore';
 import { FolderTree, FileStatus, TreeNode } from './FolderTree';
@@ -232,11 +233,11 @@ export function PreviewPanel() {
     ];
   }, [plan]);
 
-  return (
+  const content = (
     <AnimatePresence>
       {mode === 'panel' && plan && (
         <motion.div
-          className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+          className="fixed inset-0 z-[10010] flex items-center justify-center bg-black/60 backdrop-blur-sm"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -372,4 +373,6 @@ export function PreviewPanel() {
       )}
     </AnimatePresence>
   );
+
+  return createPortal(content, document.body);
 }

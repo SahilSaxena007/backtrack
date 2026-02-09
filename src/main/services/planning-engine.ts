@@ -249,6 +249,7 @@ export class PlanningEngine {
 
     // Step 5: Parse and validate JSON response
     const actionPlan = this.parseAndValidatePlan(geminiResponse.text);
+    this.enforceTargetBoundaries(actionPlan, input.targetFolder);
 
     // Step 6: Return draft plan with metadata
     return {
@@ -305,7 +306,10 @@ export class PlanningEngine {
     for (const file of files) {
       if (file.isDirectory) {
         totalFolders++;
-        existingStructure.push(file.name);
+        // ignore any MCP error placeholder entries
+        if (!file.name.toLowerCase().includes('mcp error')) {
+          existingStructure.push(file.name);
+        }
       } else {
         totalFiles++;
 
@@ -359,9 +363,20 @@ ${input.targetFolder}
 **CONSTRAINTS:**
 ${input.constraints.length > 0 ? input.constraints.map(c => `- ${c}`).join('\n') : '- None'}
 
+**HARD GUARDS (DO NOT VIOLATE):**
+- The target folder already exists. Do NOT create or rename the target folder itself (${input.targetFolder}).
+- All actions (create, move, rename, copy) must stay strictly inside the target folder path. No new root folders.
+- Only create subfolders under the target folder when required (e.g., "Images").
+- Move existing files (especially images) into the target/Images subfolder; do NOT duplicate or re-create the target folder.
+
 **FILE ANALYSIS:**
 - Total files: ${patterns.total_files}
 - Total folders (existing): ${patterns.total_folders}
+- Files to organize (paths):
+${input.scannedFiles
+      .filter(f => !f.isDirectory)
+      .map(f => `- ${f.path} (${f.extension || 'unknown'})`)
+      .join('\n') || '- None listed'}
 
 **Files by Extension:**
 ${fileBreakdown}
@@ -486,6 +501,66 @@ Based on the user intent "${input.userIntent}", create a complete, safe, and eff
     const validTypes: ActionType[] = ['create_folder', 'move_file', 'move_files_batch', 'rename_file', 'copy_file'];
     if (!validTypes.includes(action.type)) {
       throw new Error(`Invalid action type: ${action.type}`);
+    }
+  }
+
+  /**
+   * Ensure all action paths stay within the provided target folder and
+   * prevent re-creating the target folder itself.
+   */
+  private enforceTargetBoundaries(plan: ActionPlan, targetFolder: string): void {
+    const target = path.resolve(targetFolder);
+    const isWithinTarget = (p?: string) => {
+      if (!p) return false;
+      const resolved = path.resolve(p);
+      return resolved === target || resolved.startsWith(`${target}${path.sep}`);
+    };
+
+    for (const action of plan.actions) {
+      switch (action.type) {
+        case 'create_folder': {
+          const dest = action.params.path;
+          if (path.resolve(dest) === target) {
+            throw new Error(`Plan is invalid: attempts to (re)create target folder ${target}.`);
+          }
+          if (!isWithinTarget(dest)) {
+            throw new Error(`Plan is invalid: create_folder target outside selected folder (${dest}).`);
+          }
+          break;
+        }
+        case 'move_file': {
+          const { source, destination } = action.params;
+          if (!isWithinTarget(source) || !isWithinTarget(destination)) {
+            throw new Error(`Plan is invalid: move_file crosses outside target folder (${source} -> ${destination}).`);
+          }
+          break;
+        }
+        case 'move_files_batch': {
+          const sourceRoot = action.params.source_folder || action.params.source;
+          const destination = action.params.destination;
+          if (!isWithinTarget(sourceRoot) || !isWithinTarget(destination)) {
+            throw new Error(`Plan is invalid: batch move outside target folder (${sourceRoot} -> ${destination}).`);
+          }
+          break;
+        }
+        case 'rename_file': {
+          const originalPath = action.params.path;
+          const newPath = path.join(path.dirname(originalPath), action.params.new_name);
+          if (!isWithinTarget(originalPath) || !isWithinTarget(newPath)) {
+            throw new Error(`Plan is invalid: rename outside target folder (${originalPath} -> ${newPath}).`);
+          }
+          break;
+        }
+        case 'copy_file': {
+          const { source, destination } = action.params;
+          if (!isWithinTarget(source) || !isWithinTarget(destination)) {
+            throw new Error(`Plan is invalid: copy_file outside target folder (${source} -> ${destination}).`);
+          }
+          break;
+        }
+        default:
+          break;
+      }
     }
   }
 

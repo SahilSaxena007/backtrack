@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { usePreviewStore } from '../../store/previewStore';
 
 const riskStyles: Record<string, { label: string; classes: string }> = {
@@ -34,11 +35,11 @@ export function PreviewToast() {
     ];
   }, [plan]);
 
-  return (
+  const content = (
     <AnimatePresence>
       {mode === 'toast' && plan && (
         <motion.div
-          className="fixed right-6 top-6 z-[60] w-[360px] rounded-2xl border border-white/20 bg-white/15 p-4 text-white shadow-[0_20px_80px_rgba(15,23,42,0.35)] backdrop-blur-[30px] dark:border-white/10 dark:bg-slate-900/40"
+          className="fixed right-6 top-6 z-[10020] w-[360px] rounded-2xl border border-white/20 bg-white/15 p-4 text-white shadow-[0_20px_80px_rgba(15,23,42,0.35)] backdrop-blur-[30px] dark:border-white/10 dark:bg-slate-900/40"
           initial={{ opacity: 0, x: 24, scale: 0.98 }}
           animate={{ opacity: 1, x: 0, scale: 1 }}
           exit={{ opacity: 0, x: 24, scale: 0.98 }}
@@ -92,4 +93,6 @@ export function PreviewToast() {
       )}
     </AnimatePresence>
   );
+
+  return createPortal(content, document.body);
 }

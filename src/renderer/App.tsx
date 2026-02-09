@@ -56,6 +56,7 @@ function App() {
       return;
     }
     const unsubscribe = window.api.onExecutionProgress((progress: any) => {
+      console.log('[ExecutionProgress]', progress);
       updateExecution(progress);
       if (progress?.status === 'success' && window.api?.getLatestExecution) {
         window.api.getLatestExecution().then((res: any) => {

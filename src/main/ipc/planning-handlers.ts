@@ -1,5 +1,6 @@
 import { IpcMain } from 'electron';
 import { getPlanningEngine, PlanningInput } from '../services/planning-engine';
+import { getMCPClient } from '../services/mcp-client';
 
 /**
  * Register all planning-related IPC handlers
@@ -16,6 +17,25 @@ export function registerPlanningHandlers(ipcMain: IpcMain): void {
       console.log(`[IPC] Target: ${input.targetFolder}`);
       console.log(`[IPC] Files: ${input.scannedFiles.length}`);
       console.log(`[IPC] Intent: ${input.userIntent}`);
+
+      // Validate target folder exists and is accessible
+      const basePath = process.env.BASE_PATH || 'C:\\Users\\sahil\\backtrack-f5-test';
+      let targetExists = false;
+      try {
+        const mcp = await getMCPClient([basePath]);
+        targetExists = await mcp.pathExists(input.targetFolder);
+      } catch (e) {
+        // Fallback to fs if MCP path check fails
+        const fs = await import('fs');
+        targetExists = fs.existsSync(input.targetFolder);
+      }
+
+      if (!targetExists) {
+        return {
+          success: false,
+          error: `Target folder not found or not allowed: ${input.targetFolder}`
+        };
+      }
 
       const planningEngine = getPlanningEngine();
       const result = await planningEngine.generateCompletePlan(input);

@@ -27,7 +27,7 @@ interface ValidationResult {
   error?: string;
 }
 
-const BASE_PATH = 'C:\\Users\\backtrack-testing';
+const BASE_PATH = process.env.BASE_PATH || 'C:\\Users\\sahil\\backtrack-f5-test';
 let useMCP = false; // Flag to switch between MCP and fs
 
 /**
@@ -66,12 +66,29 @@ async function scanFolderMCP(folderPath: string, recursive: boolean = false): Pr
     // Read directory using MCP
     const files = await mcpClient.readDirectory(folderPath, recursive);
 
+    // Detect server error text in response
+    const hasToolError = files.some((f) =>
+      typeof f.name === 'string' &&
+      f.name.toLowerCase().includes('read_directory') &&
+      f.name.toLowerCase().includes('not found')
+    );
+    if (hasToolError) {
+      throw new Error('MCP read_directory not available');
+    }
+
     console.log(`[MCP Filesystem] Scanned ${files.length} files in ${folderPath}`);
     return { success: true, files };
 
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
     console.error(`[MCP Filesystem] Error scanning folder: ${message}`);
+
+    // Fallback to fs if MCP tool is unavailable
+    if (message.includes('read_directory not found') || (message.includes('Tool') && message.includes('not found'))) {
+      console.warn('[MCP Filesystem] Falling back to Node fs scan due to missing MCP tool.');
+      return scanFolderFS(folderPath, recursive);
+    }
+
     return { success: false, error: message };
   }
 }
@@ -177,9 +194,16 @@ export function registerFilesystemHandlers(ipcMain: IpcMain): void {
   // Initialize MCP client and folder indexer on startup
   (async () => {
     try {
-      await getMCPClient([BASE_PATH]);
-      useMCP = true;
-      console.log('[Filesystem] MCP client initialized, using MCP for file operations');
+      const client = await getMCPClient([BASE_PATH]);
+      // Probe that required tool exists; if not, fall back.
+      try {
+        await client.readDirectory(BASE_PATH, false);
+        useMCP = true;
+        console.log('[Filesystem] MCP client initialized, using MCP for file operations');
+      } catch (probeError: any) {
+        console.warn('[Filesystem] MCP probe failed, falling back to Node.js fs:', probeError?.message || probeError);
+        useMCP = false;
+      }
     } catch (error) {
       console.warn('[Filesystem] MCP initialization failed, falling back to Node.js fs:', error);
       useMCP = false;

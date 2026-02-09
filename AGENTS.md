@@ -66,6 +66,11 @@
 - Added planning stage messaging/loading handling and robust error catch around F2/F3 handoff.
 - Undo engine uses MCP `moveFile` plus fs-extra deletes (no unsupported MCP delete tools) and interface aligned to MCP client.
 - Renderer typing stabilized with `window.api` declarations; lint now clean.
+- BASE_PATH defaults aligned to `C:\Users\sahil\backtrack-f5-test` in renderer and main fallbacks.
+- Filesystem handlers now respect BASE_PATH env/fallback (`C:\Users\sahil\backtrack-f5-test`) so scanFolder no longer denies access when using that path.
+- Preview toast/panel now portal to body with high z-index so previews appear overlayed (not trapped in chat).
+- Planning tightened: hard guards in prompt, path-boundary validation rejects plans outside target or recreating target folder; target existence checked via MCP before planning.
+- Added execution progress logging in renderer to observe stuck-progress issues.
 
 ## Agent Workflow Notes
 

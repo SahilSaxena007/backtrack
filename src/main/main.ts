@@ -253,9 +253,9 @@ function setupIPC(): void {
 
 // App lifecycle
 app.whenReady().then(async () => {
+  setupIPC(); // register handlers before any renderer calls them
   createMainControlWindow();
   await initializeExecutionEngine();
-  setupIPC();
 
   app.on('activate', () => {
     if (!mainControlWindow) {
@@ -280,7 +280,7 @@ async function initializeExecutionEngine() {
   const ledgerService = new LedgerService();
   await ledgerService.initialize();
 
-  const basePath = process.env.BASE_PATH || 'C:\\Users\\backtrack-testing';
+  const basePath = process.env.BASE_PATH || 'C:\\Users\\sahil\\backtrack-f5-test';
   const mcpClient = await getMCPClient([basePath]);
 
   if (!mainControlWindow) {

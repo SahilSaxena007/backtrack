@@ -19,6 +19,9 @@ export function ChatDrawerPage() {
 
   // Initialize folder list and Fuse.js on mount
   useEffect(() => {
+    // Safety: reset loading state in case it persisted from a previous session/crash
+    setLoading(false);
+
     (async () => {
       try {
         const folders = await window.api.getFolderList();
@@ -121,6 +124,12 @@ export function ChatDrawerPage() {
 
       const intent = result.intent!;
 
+      // Normalize intent target: if Gemini returns placeholder like "specific_path" or "unknown", fall back to default base path
+      const DEFAULT_BASE_PATH = import.meta.env.VITE_BASE_PATH || 'C:\\Users\\sahil\\backtrack-f5-test';
+      if (intent.target === 'specific_path' || intent.target === 'unknown') {
+        intent.target = DEFAULT_BASE_PATH;
+      }
+
       // Check if clarification is needed
       if (intent.needsClarification) {
         console.log('[ChatDrawer] Intent unclear, generating clarification...');
@@ -136,6 +145,10 @@ export function ChatDrawerPage() {
             "I'd like to help, but I need a bit more information. Which folder would you like me to work with?"
           );
         }
+
+        // Stop loading so user can answer the clarification
+        setLoading(false);
+        return;
       } else {
         // Intent is clear! Show confirmation
         const confirmationMessage = `✓ Got it! I'll help you **${intent.action}** files in **${intent.target}** ${intent.method !== 'unknown' ? `**${intent.method.replace('_', ' ')}**` : ''}.
@@ -147,14 +160,30 @@ Scanning folder...`;
         addAssistantMessage(confirmationMessage);
 
         // Resolve target folder to full path
-        // If target is just a folder name like "Downloads", map it to BASE_PATH\Downloads
-        const BASE_PATH = 'C:\\Users\\backtrack-testing';
-        let targetPath = intent.target;
+        const BASE_PATH =
+          import.meta.env.VITE_BASE_PATH || 'C:\\Users\\sahil\\backtrack-f5-test';
 
-        // If target doesn't start with a drive letter or BASE_PATH, assume it's a subfolder
-        if (!targetPath.match(/^[A-Z]:\\/i) && !targetPath.startsWith(BASE_PATH)) {
-          targetPath = `${BASE_PATH}\\${targetPath}`;
-          console.log(`[ChatDrawer] Resolved "${intent.target}" to full path: ${targetPath}`);
+        let targetPath: string;
+
+        // If intent.target is generic/descriptive (like "specific_path"), use BASE_PATH directly
+        if (intent.target === 'specific_path' || intent.target === 'unknown' || intent.target === 'target_folder') {
+          targetPath = BASE_PATH;
+          console.log(`[ChatDrawer] Intent target is generic ("${intent.target}"), using BASE_PATH: ${targetPath}`);
+        }
+        // If target mentions the BASE_PATH folder name, extract it
+        else if (trimmed.toLowerCase().includes('backtrack-f5-test')) {
+          targetPath = BASE_PATH;
+          console.log(`[ChatDrawer] User mentioned backtrack-f5-test, using BASE_PATH: ${targetPath}`);
+        }
+        // If target is absolute path, use it directly
+        else if (intent.target.match(/^[A-Z]:\\/i)) {
+          targetPath = intent.target;
+          console.log(`[ChatDrawer] Using absolute path from intent: ${targetPath}`);
+        }
+        // Otherwise, treat as subfolder of BASE_PATH
+        else {
+          targetPath = `${BASE_PATH}\\${intent.target}`;
+          console.log(`[ChatDrawer] Resolved "${intent.target}" to subfolder: ${targetPath}`);
         }
 
         // Scan the target folder
@@ -174,11 +203,18 @@ Scanning folder...`;
         console.log(`[ChatDrawer] Scanned ${files.length} items`);
 
         // Prepare F1 → F2 handoff data
+        const enforcedConstraints = [
+          ...intent.constraints,
+          'Use the existing target folder; do not create a new root folder.',
+          'Only create subfolders inside the target folder when necessary.',
+          'Move existing files (especially images) into the target/Images folder; do not duplicate or re-create the target folder.'
+        ];
+
         const handoffData = {
           conversationId: useConversationStore.getState().conversationId,
           userIntent: trimmed,
           targetFolder: targetPath, // Use resolved path, not intent.target
-          constraints: intent.constraints,
+          constraints: enforcedConstraints,
           clarifications: [], // Will be populated if clarification flow is implemented
           scannedFiles: files,
           timestamp: new Date().toISOString(),

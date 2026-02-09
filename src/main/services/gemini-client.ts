@@ -49,12 +49,15 @@ export class GeminiClient {
 
     this.client = new GoogleGenerativeAI(apiKey);
 
-    // Use Gemini 3 Pro for higher-quality reasoning
+    // Prefer env override so we can swap models without code changes.
+    // Gemini 3 requires the "-preview" suffix on the public endpoint as of Feb 2026.
+    const modelName = process.env.GEMINI_MODEL || 'gemini-3-pro-preview';
+
     this.model = this.client.getGenerativeModel({
-      model: 'gemini-3-pro'
+      model: modelName
     });
 
-    console.log('[Gemini] Client initialized with model: gemini-3-pro');
+    console.log(`[Gemini] Client initialized with model: ${modelName}`);
   }
 
   /**
@@ -193,7 +196,7 @@ Output JSON in this exact format:
               temperature: 0.3, // Lower temperature for more consistent JSON
             }
           }),
-          10000 // 10 second timeout
+          60000 // 60 second timeout (planning can take 20-30s)
         );
 
         const responseText = result.response.text();
@@ -257,7 +260,7 @@ Return ONLY the question text, no JSON, no extra formatting.`;
             temperature: 0.7, // Slightly higher for natural language
           }
         }),
-        10000 // 10 second timeout
+        60000 // 60 second timeout
       );
 
       const question = result.response.text().trim();
