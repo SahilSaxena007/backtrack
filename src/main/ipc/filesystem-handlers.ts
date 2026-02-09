@@ -28,7 +28,7 @@ interface ValidationResult {
 }
 
 const BASE_PATH = process.env.BASE_PATH || 'C:\\Users\\sahil\\backtrack-f5-test';
-let useMCP = false; // Flag to switch between MCP and fs
+let useMCP = process.env.USE_LOCAL_FS === '1' ? false : false; // default to fs unless explicitly using MCP
 
 /**
  * Get all indexed folders (scanned 2 levels deep)
@@ -193,20 +193,24 @@ async function validateFolderPath(folderPath: string): Promise<ValidationResult>
 export function registerFilesystemHandlers(ipcMain: IpcMain): void {
   // Initialize MCP client and folder indexer on startup
   (async () => {
-    try {
-      const client = await getMCPClient([BASE_PATH]);
-      // Probe that required tool exists; if not, fall back.
+    if (process.env.USE_LOCAL_FS === '1') {
+      useMCP = false;
+      console.log('[Filesystem] USE_LOCAL_FS=1 -> using Node.js fs for all ops');
+    } else {
       try {
-        await client.readDirectory(BASE_PATH, false);
-        useMCP = true;
-        console.log('[Filesystem] MCP client initialized, using MCP for file operations');
-      } catch (probeError: any) {
-        console.warn('[Filesystem] MCP probe failed, falling back to Node.js fs:', probeError?.message || probeError);
+        const client = await getMCPClient([BASE_PATH]);
+        try {
+          await (client as any).readDirectory(BASE_PATH, false);
+          useMCP = true;
+          console.log('[Filesystem] MCP client initialized, using MCP for file operations');
+        } catch (probeError: any) {
+          console.warn('[Filesystem] MCP probe failed, falling back to Node.js fs:', probeError?.message || probeError);
+          useMCP = false;
+        }
+      } catch (error) {
+        console.warn('[Filesystem] MCP initialization failed, falling back to Node.js fs:', error);
         useMCP = false;
       }
-    } catch (error) {
-      console.warn('[Filesystem] MCP initialization failed, falling back to Node.js fs:', error);
-      useMCP = false;
     }
 
     // Initialize folder indexer for autocomplete

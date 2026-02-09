@@ -1,5 +1,7 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js';
+import fs from 'fs-extra';
+import path from 'path';
 
 interface FileMetadata {
   name: string;
@@ -67,8 +69,9 @@ export class MCPFilesystemClient {
     try {
       console.log(`[MCP] Reading directory: ${path}, recursive: ${recursive}`);
 
+      // Use correct MCP tool name: list_directory (not read_directory)
       const result = await this.client.callTool({
-        name: 'read_directory',
+        name: 'list_directory',
         arguments: {
           path: path
         }
@@ -96,8 +99,9 @@ export class MCPFilesystemClient {
     try {
       console.log(`[MCP] Reading file: ${path}`);
 
+      // Use correct MCP tool name: read_text_file (not read_file)
       const result = await this.client.callTool({
-        name: 'read_file',
+        name: 'read_text_file',
         arguments: {
           path: path
         }
@@ -208,15 +212,17 @@ export class MCPFilesystemClient {
       throw new Error('MCP client not connected');
     }
     try {
+      // Try to read as file first
       await this.client.callTool({
-        name: 'read_file',
+        name: 'read_text_file',
         arguments: { path: pathToCheck }
       });
       return true;
     } catch {
       try {
+        // Try to list as directory (correct tool name: list_directory)
         await this.client.callTool({
-          name: 'read_directory',
+          name: 'list_directory',
           arguments: { path: pathToCheck }
         });
         return true;
@@ -314,14 +320,108 @@ export class MCPFilesystemClient {
   }
 }
 
-// Singleton instance
-let mcpInstance: MCPFilesystemClient | null = null;
+/**
+ * Local filesystem fallback that mirrors the minimal MCP surface area we use.
+ */
+export class LocalFilesystemClient {
+  async initialize(_allowedPaths: string[]): Promise<void> {
+    return;
+  }
 
-export async function getMCPClient(allowedPaths?: string[]): Promise<MCPFilesystemClient> {
+  async readDirectory(dirPath: string, recursive = false): Promise<FileMetadata[]> {
+    const items: FileMetadata[] = [];
+    const walk = async (p: string) => {
+      const entries = await fs.readdir(p, { withFileTypes: true });
+      for (const entry of entries) {
+        const fullPath = path.join(p, entry.name);
+        const stats = await fs.stat(fullPath);
+        items.push({
+          name: entry.name,
+          path: fullPath,
+          size: stats.size,
+          extension: entry.isDirectory() ? '' : path.extname(entry.name).toLowerCase(),
+          modified: stats.mtime.toISOString(),
+          created: stats.birthtime.toISOString(),
+          isDirectory: entry.isDirectory(),
+        });
+        if (recursive && entry.isDirectory()) {
+          await walk(fullPath);
+        }
+      }
+    };
+    await walk(dirPath);
+    return items;
+  }
+
+  async readFile(filePath: string): Promise<string> {
+    return fs.readFile(filePath, 'utf-8');
+  }
+
+  async writeFile(filePath: string, content: string): Promise<void> {
+    await fs.ensureDir(path.dirname(filePath));
+    await fs.writeFile(filePath, content, 'utf-8');
+  }
+
+  async createDirectory(dirPath: string): Promise<void> {
+    await fs.ensureDir(dirPath);
+  }
+
+  async moveFile(source: string, destination: string): Promise<void> {
+    await fs.ensureDir(path.dirname(destination));
+    await fs.move(source, destination, { overwrite: true });
+  }
+
+  async callTool(name: string, args: Record<string, any>): Promise<any> {
+    switch (name) {
+      case 'create_directory':
+        return this.createDirectory(args.path);
+      case 'move_file':
+        return this.moveFile(args.source, args.destination);
+      case 'write_file':
+        return this.writeFile(args.path, args.content ?? '');
+      case 'read_file':
+        return this.readFile(args.path);
+      case 'read_directory':
+        return this.readDirectory(args.path, args.recursive ?? false);
+      default:
+        throw new Error(`Unsupported local tool: ${name}`);
+    }
+  }
+
+  async pathExists(p: string): Promise<boolean> {
+    return fs.pathExists(p);
+  }
+
+  isClientConnected(): boolean {
+    return true;
+  }
+}
+
+// Singleton instance
+let mcpInstance: MCPFilesystemClient | LocalFilesystemClient | null = null;
+
+export async function getMCPClient(allowedPaths?: string[]): Promise<MCPFilesystemClient | LocalFilesystemClient> {
+  const useLocal = process.env.USE_LOCAL_FS === '1';
+  if (useLocal) {
+    if (!mcpInstance) {
+      mcpInstance = new LocalFilesystemClient();
+      if (allowedPaths) await (mcpInstance as any).initialize(allowedPaths);
+    }
+    return mcpInstance;
+  }
+
   if (!mcpInstance) {
-    mcpInstance = new MCPFilesystemClient();
-    if (allowedPaths) {
-      await mcpInstance.initialize(allowedPaths);
+    try {
+      const client = new MCPFilesystemClient();
+      if (allowedPaths) {
+        await client.initialize(allowedPaths);
+      }
+      mcpInstance = client;
+    } catch (err) {
+      console.warn('[MCP] Falling back to local filesystem client due to init failure:', err);
+      const local = new LocalFilesystemClient();
+      if (allowedPaths) await local.initialize(allowedPaths);
+      mcpInstance = local;
     }
   }
   return mcpInstance;

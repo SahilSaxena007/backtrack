@@ -466,6 +466,14 @@ Based on the user intent "${input.userIntent}", create a complete, safe, and eff
         throw new Error('Invalid plan: actions must be an array');
       }
 
+      // Log full plan for debugging
+      console.log('[PlanningEngine] Parsed plan:', JSON.stringify(plan, null, 2));
+
+      // Auto-fix common Gemini mistakes
+      for (const action of plan.actions) {
+        this.autoFixActionParams(action);
+      }
+
       // Validate each action
       for (const action of plan.actions) {
         this.validateAction(action);
@@ -483,6 +491,75 @@ Based on the user intent "${input.userIntent}", create a complete, safe, and eff
     } catch (error) {
       console.error('[PlanningEngine] Failed to parse plan JSON:', error);
       throw new Error(`Invalid JSON response from Gemini: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Auto-fix common Gemini mistakes in action parameters
+   * Handles multiple field name variations that Gemini generates
+   */
+  private autoFixActionParams(action: Action): void {
+    if (action.type === 'move_files_batch') {
+      const params = action.params as any;
+
+      // Step 1: Normalize field names (Gemini uses inconsistent names)
+      // Handle: source_paths, file_paths, files
+      const fileArray = params.source_paths || params.file_paths || params.files;
+
+      // Handle: destination_folder, destination_path, destination
+      const destFolder = params.destination_folder || params.destination_path || params.destination;
+
+      if (!fileArray || !Array.isArray(fileArray) || fileArray.length === 0) {
+        console.warn(`[PlanningEngine] ${action.id}: No files array found in params`);
+        return;
+      }
+
+      const firstFile = fileArray[0] as string;
+
+      // Step 2: Check if files contain full paths (has drive letter or starts with /)
+      if (firstFile.match(/^[A-Z]:\\/i) || firstFile.startsWith('/')) {
+        // Extract source folder from first file's directory
+        const sourceFolder = path.dirname(firstFile);
+
+        // Check if all files have the same source folder
+        const allSameSource = fileArray.every((f: any) => {
+          const filePath = f as string;
+          return path.dirname(filePath) === sourceFolder;
+        });
+
+        if (allSameSource) {
+          // Step 3: Auto-fix - extract source folder
+          if (!params.source && !params.source_folder) {
+            params.source = sourceFolder;
+            console.log(`[PlanningEngine] Auto-fixed ${action.id}: extracted source="${sourceFolder}"`);
+          }
+
+          // Step 4: Convert full paths to just filenames
+          const filenames = fileArray.map((f: any) => path.basename(f as string));
+          params.files = filenames;
+          console.log(`[PlanningEngine] Auto-fixed ${action.id}: converted to filenames: ${filenames.join(', ')}`);
+
+          // Step 5: Remove old field names to avoid confusion
+          delete params.source_paths;
+          delete params.file_paths;
+        }
+      } else {
+        // Files are already just filenames, just normalize field name
+        if (!params.files && fileArray) {
+          params.files = fileArray;
+          delete params.source_paths;
+          delete params.file_paths;
+          console.log(`[PlanningEngine] Auto-fixed ${action.id}: normalized files field`);
+        }
+      }
+
+      // Step 6: Normalize destination field name
+      if (destFolder && !params.destination) {
+        params.destination = destFolder;
+        delete params.destination_folder;
+        delete params.destination_path;
+        console.log(`[PlanningEngine] Auto-fixed ${action.id}: normalized destination="${destFolder}"`);
+      }
     }
   }
 
@@ -538,6 +615,14 @@ Based on the user intent "${input.userIntent}", create a complete, safe, and eff
         case 'move_files_batch': {
           const sourceRoot = action.params.source_folder || action.params.source;
           const destination = action.params.destination;
+
+          // Better error messages for missing params
+          if (!sourceRoot) {
+            throw new Error(`Plan is invalid: move_files_batch action "${action.id}" missing source/source_folder parameter. Params: ${JSON.stringify(action.params)}`);
+          }
+          if (!destination) {
+            throw new Error(`Plan is invalid: move_files_batch action "${action.id}" missing destination parameter. Params: ${JSON.stringify(action.params)}`);
+          }
           if (!isWithinTarget(sourceRoot) || !isWithinTarget(destination)) {
             throw new Error(`Plan is invalid: batch move outside target folder (${sourceRoot} -> ${destination}).`);
           }
