@@ -9,7 +9,6 @@ export function ChatDrawerPage() {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showAutocomplete, setShowAutocomplete] = useState(false);
   const [selectedSuggestionIndex, setSelectedSuggestionIndex] = useState(0);
-  const [folderList, setFolderList] = useState<string[]>([]);
   const [fuse, setFuse] = useState<Fuse<string> | null>(null);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -24,10 +23,9 @@ export function ChatDrawerPage() {
       try {
         const folders = await window.api.getFolderList();
         console.log('[ChatDrawer] Loaded folder list:', folders.length, 'folders');
-        setFolderList(folders);
 
         // Initialize Fuse.js for fuzzy search
-        const fuseInstance = new Fuse(folders, {
+        const fuseInstance = new Fuse<string>(folders, {
           threshold: 0.3, // Fuzzy matching sensitivity (0 = exact, 1 = match anything)
           includeScore: true,
           minMatchCharLength: 2,
@@ -187,18 +185,48 @@ Scanning folder...`;
           parsedIntent: intent,
         };
 
-        // Store handoff data for F2 (will be used when F2 is implemented)
+        // Store handoff data for debugging/traceability
         console.log('[ChatDrawer] F1 → F2 Handoff Data:', handoffData);
         window.localStorage.setItem('f1-to-f2-handoff', JSON.stringify(handoffData));
 
         // Show scan results
         const scanSummary = `📁 Scanned **${files.length}** items in ${targetPath}
 
-Ready to generate a plan! (F2 Planning will take over from here)
-
 _Clarity Score: ${(intent.clarityScore * 100).toFixed(0)}%_`;
-
         addAssistantMessage(scanSummary);
+
+        // ---- F2: Planning pipeline ----
+        addAssistantMessage('🤖 Generating action plan...');
+        try {
+          const planResult = await window.api.generatePlan(handoffData);
+
+          if (!planResult?.success || !planResult.plan) {
+            addAssistantMessage(`❌ Planning failed: ${planResult?.error || 'Unknown error'}`);
+            setLoading(false);
+            return;
+          }
+
+          // Optional stage timing summary if available
+          if (planResult.plan.gemini_metadata) {
+            const { stage1_latency_ms, stage2_latency_ms, stage3_latency_ms } =
+              planResult.plan.gemini_metadata;
+            addAssistantMessage(
+              `Stage timings — Draft: ${stage1_latency_ms ?? '?'}ms, Safety: ${
+                stage2_latency_ms ?? '?'
+              }ms, Undo: ${stage3_latency_ms ?? '?'}ms`
+            );
+          }
+
+          // ---- F3: Preview ----
+          addAssistantMessage('✅ Plan ready! Opening preview...');
+          const { usePreviewStore } = await import('../store/previewStore');
+          usePreviewStore.getState().showToast(planResult.plan);
+        } catch (planningError) {
+          console.error('[ChatDrawer] Planning error:', planningError);
+          addAssistantMessage('⚠️ Planning engine encountered an error. Please try again.');
+          setLoading(false);
+          return;
+        }
       }
 
       setLoading(false);

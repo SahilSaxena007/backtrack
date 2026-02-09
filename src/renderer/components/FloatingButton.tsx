@@ -4,8 +4,8 @@ import { MessageCircle, X } from 'lucide-react';
 
 export function FloatingButton() {
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [hasNewMessage, setHasNewMessage] = useState(false);
+  const [isLoading] = useState(false);
+  const [hasNewMessage] = useState(false);
 
   // Check drawer state on mount and poll for changes
   useEffect(() => {

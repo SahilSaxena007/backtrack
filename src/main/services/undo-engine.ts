@@ -1,4 +1,5 @@
 import path from 'path';
+import fs from 'fs-extra';
 import { BrowserWindow } from 'electron';
 import { LedgerService, ExecutionRecord, ActionLog } from './ledger-service';
 import { BackupService } from './backup-service';
@@ -87,13 +88,14 @@ export class UndoEngine {
   private async executeInverseAction(action: ActionLog): Promise<void> {
     switch (action.action_type) {
       case 'create_folder':
-        await this.mcpClient.callTool('delete_directory', { path: action.action_params.path });
+        // MCP filesystem server does not support delete; use fs-extra to remove the created folder
+        await fs.remove(action.action_params.path);
         break;
       case 'move_file':
-        await this.mcpClient.callTool('move_file', {
-          source: action.action_params.destination,
-          destination: action.action_params.source,
-        });
+        await this.mcpClient.moveFile(
+          action.action_params.destination,
+          action.action_params.source
+        );
         break;
       case 'move_files_batch': {
         const files = action.action_params.files;
@@ -102,10 +104,7 @@ export class UndoEngine {
         for (const file of files) {
           const currentLocation = path.join(destination, file);
           const originalLocation = path.join(sourceFolder, file);
-          await this.mcpClient.callTool('move_file', {
-            source: currentLocation,
-            destination: originalLocation,
-          });
+          await this.mcpClient.moveFile(currentLocation, originalLocation);
         }
         break;
       }
@@ -114,14 +113,12 @@ export class UndoEngine {
           path.dirname(action.action_params.path),
           action.action_params.new_name
         );
-        await this.mcpClient.callTool('move_file', {
-          source: newPath,
-          destination: action.action_params.path,
-        });
+        await this.mcpClient.moveFile(newPath, action.action_params.path);
         break;
       }
       case 'create_file':
-        await this.mcpClient.callTool('delete_file', { path: action.action_params.path });
+        // MCP filesystem server does not support delete; use fs-extra to remove the file
+        await fs.remove(action.action_params.path);
         break;
       default:
         throw new Error(`Unknown action type for undo: ${action.action_type}`);
@@ -176,5 +173,5 @@ export interface UndoProgress {
 }
 
 export interface MCPClient {
-  callTool: (tool: string, params: Record<string, any>) => Promise<any>;
+  moveFile: (source: string, destination: string) => Promise<any>;
 }

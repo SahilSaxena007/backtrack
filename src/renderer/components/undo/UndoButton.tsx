@@ -25,7 +25,7 @@ export default function UndoButton() {
             exit={{ opacity: 0, y: -10 }}
             onClick={handleClick}
             disabled={!canUndo || isUndoing}
-            className={`fixed top-32 right-6 z-[9996] px-4 py-3 rounded-xl backdrop-blur-[20px] backdrop-saturate-[150%] border shadow-lg transition-all duration-200 ${
+            className={`fixed bottom-24 right-6 z-[9996] px-4 py-3 rounded-xl backdrop-blur-[20px] backdrop-saturate-[150%] border shadow-lg transition-all duration-200 ${
               canUndo && !isUndoing
                 ? 'bg-orange-500/90 hover:bg-orange-600/90 text-white border-orange-400 cursor-pointer hover:scale-105'
                 : 'bg-gray-300/70 text-gray-500 border-gray-400 cursor-not-allowed'

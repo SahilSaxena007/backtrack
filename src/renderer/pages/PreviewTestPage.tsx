@@ -6,7 +6,7 @@
  */
 
 import { useState } from 'react';
-import { usePreviewStore, PreviewMode } from '../store/previewStore';
+import { usePreviewStore } from '../store/previewStore';
 import { useUndoStore } from '../store/undoStore';
 import { PreviewButton } from '../components/preview/PreviewButton';
 import type { F2_to_F3_Input } from '@shared/types';

@@ -62,6 +62,10 @@
 - Preview panel glassmorphism adjusted to match toast translucency; panel size reduced by 10%.
 - Fixed undo engine import to source `FileModification` from shared types (resolves TS2459).
 - Reordered startup to create main window before initializing execution engine, preventing "Main window not initialized" during dev:electron.
+- F1 → F2 → F3 pipeline wired: ChatDrawer now triggers `generatePlan`, handles errors, and opens preview toast after scan.
+- Added planning stage messaging/loading handling and robust error catch around F2/F3 handoff.
+- Undo engine uses MCP `moveFile` plus fs-extra deletes (no unsupported MCP delete tools) and interface aligned to MCP client.
+- Renderer typing stabilized with `window.api` declarations; lint now clean.
 
 ## Agent Workflow Notes
 
