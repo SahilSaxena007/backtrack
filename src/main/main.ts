@@ -253,9 +253,9 @@ function setupIPC(): void {
 
 // App lifecycle
 app.whenReady().then(async () => {
-  createMainControlWindow();
   await initializeExecutionEngine();
   setupIPC();
+  createMainControlWindow();
 
   app.on('activate', () => {
     if (!mainControlWindow) {

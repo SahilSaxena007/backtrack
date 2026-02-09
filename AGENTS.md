@@ -56,6 +56,7 @@
 - F5 Transactional Execution: Hours 1-5 complete (deps, trace store, backup service, ledger, execution engine, progress overlay + IPC, services initialized, F3 triggers F5).
 - F5 demo mode available in preview test page (runs execution against BASE_PATH).
 - Undo flow hardened to fetch latest execution if none selected.
+- IPC registration moved earlier to avoid missing handlers on first load.
 - Guarded execution progress subscription for browser preview mode (window.api may be undefined).
 - Preview button label emphasized for clearer affordance.
 - Preview panel glassmorphism adjusted to match toast translucency; panel size reduced by 10%.
