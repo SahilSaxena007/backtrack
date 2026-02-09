@@ -56,6 +56,7 @@ const formatPlanTimings = (plan: any) => {
 };
 
 export function ChatDrawerPage() {
+  const CHAT_SESSION_KEY = 'backtrack.chat.session-initialized';
   const [inputValue, setInputValue] = useState('');
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showAutocomplete, setShowAutocomplete] = useState(false);
@@ -74,7 +75,15 @@ export function ChatDrawerPage() {
   const planningTimeoutsRef = useRef<number[]>([]);
   const planningCancelledRef = useRef(false);
 
-  const { messages, isLoading, addUserMessage, addAssistantMessage, setLoading, buildConversationContext } =
+  const {
+    messages,
+    isLoading,
+    addUserMessage,
+    addAssistantMessage,
+    setLoading,
+    buildConversationContext,
+    clearConversation
+  } =
     useConversationStore();
 
   const stageStatus = useMemo(() => {
@@ -117,6 +126,10 @@ export function ChatDrawerPage() {
   };
 
   useEffect(() => {
+    if (!sessionStorage.getItem(CHAT_SESSION_KEY)) {
+      clearConversation();
+      sessionStorage.setItem(CHAT_SESSION_KEY, 'true');
+    }
     setLoading(false);
 
     (async () => {
@@ -136,7 +149,7 @@ export function ChatDrawerPage() {
     return () => {
       clearPlanningTimers();
     };
-  }, [setLoading]);
+  }, [setLoading, clearConversation]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -361,6 +374,28 @@ export function ChatDrawerPage() {
 
       if (folderCount >= 4) {
         addAssistantMessage('This folder already has multiple subfolders. I will preserve structure where possible.');
+      }
+
+      if (window.api?.getLatestExecution) {
+        const latest = await window.api.getLatestExecution();
+        const sameTarget =
+          latest?.success &&
+          latest.execution &&
+          latest.execution.status === 'success' &&
+          String(latest.execution.target_folder || '').toLowerCase() === targetPath.toLowerCase();
+
+        if (sameTarget) {
+          const proceed = window.confirm(
+            'This folder was organized previously. Continue and generate a new organization plan?'
+          );
+          if (!proceed) {
+            addAssistantMessage('No problem. I cancelled this run so you can review current changes first.');
+            setLoading(false);
+            stopPlanningTimeline();
+            return;
+          }
+          addAssistantMessage('Proceeding with a fresh plan for an already organized folder.');
+        }
       }
 
       addAssistantMessage(`Found ${fileOnlyCount} files. Creating a smart organization plan...`);

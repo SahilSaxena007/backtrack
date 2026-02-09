@@ -45,6 +45,7 @@ The app uses **four separate Electron windows**, not a traditional single-window
    - Separate window for preview panel, before/after tree, execution progress, and undo UI
    - Opened only when a plan is ready or user toggles it from chat
    - Asks user confirmation before replacing an active preview with a newly generated plan
+   - After execution success, reopening workspace defaults to preview button mode (does not auto-force panel open)
    - Loads at `http://localhost:5173/#/preview-workspace`
 
 **Critical**: Windows are created/destroyed dynamically via IPC handlers (`deploy-floating-button`, `hide-floating-button`). When control panel closes, all windows close.
@@ -70,6 +71,16 @@ Two Zustand stores in renderer process:
 - **`conversationStore.ts`**: Message history (user/assistant), conversation ID
 - **`previewStore.ts`**: F3 preview mode state + approve/modify/cancel actions
 - **`executionStore.ts` / `undoStore.ts`**: execution and undo overlays
+- Undo state is hydrated from latest successful ledger execution on app load for control/chat/preview surfaces.
+
+### Reliability Guards
+
+- Startup recovery for interrupted runs: `main.ts` checks ledger for `in_progress` executions and restores from backup before marking failed.
+- Repeated-organization guard: chat flow asks explicit confirmation when the same target folder was recently organized.
+- Filesystem permission/path errors are translated to judge-friendly user messages in filesystem IPC handlers.
+- Undo visibility is session-scoped (enabled after successful execution events in current run; not auto-hydrated from old runs).
+- In dev mode, onboarding/sandbox selection is session-based so it appears again on fresh `npm run dev` launches.
+- Chat persistence is reset once per new app session and retained during active session interactions.
 
 **Important**: Button polls drawer state every 500ms to stay synced (see `FloatingButton.tsx`).
 

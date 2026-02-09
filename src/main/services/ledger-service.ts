@@ -66,6 +66,25 @@ export class LedgerService {
     return (await fs.readJson(path.join(this.ledgerRoot, latest))) as ExecutionRecord;
   }
 
+  async getExecutionsByStatus(status: ExecutionRecord['status']): Promise<ExecutionRecord[]> {
+    const files = await fs.readdir(this.ledgerRoot);
+    if (files.length === 0) {
+      return [];
+    }
+
+    const records: ExecutionRecord[] = [];
+    for (const file of files) {
+      const fullPath = path.join(this.ledgerRoot, file);
+      const record = (await fs.readJson(fullPath)) as ExecutionRecord;
+      if (record.status === status) {
+        records.push(record);
+      }
+    }
+
+    records.sort((a, b) => new Date(b.started_at).getTime() - new Date(a.started_at).getTime());
+    return records;
+  }
+
   private getExecutionPath(executionId: string): string {
     return path.join(this.ledgerRoot, `exec_${executionId}.json`);
   }

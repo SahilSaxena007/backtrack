@@ -59,13 +59,13 @@ export function MainControlPage() {
   }, []);
 
   const handleDeploy = async () => {
-    setStatus('Deploying floating button...');
+    setStatus('Deploying agent button...');
     const result = await window.api.deployFloatingButton();
     if (result.success) {
       setIsDeployed(true);
-      setStatus('Floating button deployed at bottom-right of your active display.');
+      setStatus('Agent button deployed at bottom-right of your active display.');
     } else {
-      setStatus(result.message || 'Could not deploy floating button.');
+      setStatus(result.message || 'Could not deploy agent button.');
     }
   };
 
@@ -74,9 +74,9 @@ export function MainControlPage() {
     const result = await window.api.hideFloatingButton();
     if (result.success) {
       setIsDeployed(false);
-      setStatus('Floating button and companion windows hidden.');
+      setStatus('Agent button and companion windows hidden.');
     } else {
-      setStatus(result.message || 'Could not hide floating button.');
+      setStatus(result.message || 'Could not hide agent button.');
     }
   };
 
@@ -109,14 +109,14 @@ export function MainControlPage() {
                 onClick={handleDeploy}
                 className="w-full rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 px-6 py-3 font-semibold text-white shadow-lg shadow-blue-500/30 transition hover:from-blue-700 hover:to-blue-600"
               >
-                Deploy Floating Button
+                Deploy Agent Button
               </button>
             ) : (
               <button
                 onClick={handleHide}
                 className="w-full rounded-xl bg-slate-800 px-6 py-3 font-semibold text-white shadow-lg transition hover:bg-slate-700"
               >
-                Hide Floating Button
+                Hide Agent Button
               </button>
             )}
           </div>

@@ -607,6 +607,48 @@ async function initializeExecutionEngine() {
     mcpClient,
     mainControlWindow
   );
+
+  await recoverInterruptedExecutions(ledgerService, backupService);
+}
+
+async function recoverInterruptedExecutions(
+  ledgerService: LedgerService,
+  backupService: BackupService
+) {
+  try {
+    const interrupted = await ledgerService.getExecutionsByStatus('in_progress');
+    if (interrupted.length === 0) {
+      return;
+    }
+
+    console.warn(`[Recovery] Found ${interrupted.length} interrupted execution(s). Starting recovery.`);
+
+    for (const execution of interrupted) {
+      try {
+        const metadata = await backupService.getBackupMetadata(execution.checkpoint_id);
+        if (metadata) {
+          await backupService.restoreFromBackup(metadata.backup_path, execution.target_folder);
+          await ledgerService.completeExecution(
+            execution.execution_id,
+            'failed',
+            'Recovered automatically after app restart.'
+          );
+          console.warn(`[Recovery] Restored interrupted execution: ${execution.execution_id}`);
+        } else {
+          await ledgerService.completeExecution(
+            execution.execution_id,
+            'failed',
+            'Execution interrupted and backup was unavailable.'
+          );
+          console.warn(`[Recovery] Marked interrupted execution without backup: ${execution.execution_id}`);
+        }
+      } catch (error) {
+        console.error(`[Recovery] Failed for execution ${execution.execution_id}:`, error);
+      }
+    }
+  } catch (error) {
+    console.error('[Recovery] Failed to inspect interrupted executions:', error);
+  }
 }
 
 // Security: Prevent new window creation

@@ -18,13 +18,16 @@ import UndoProgress from './components/undo/UndoProgress';
 import ModificationWarning from './components/undo/ModificationWarning';
 
 function App() {
+  const DEV_ONBOARDING_SESSION_KEY = 'backtrack.dev.onboarding-complete';
+  const EXECUTION_SESSION_KEY = 'backtrack.session.has-executed';
   const [currentPage, setCurrentPage] = useState<string>('');
   const [modifications, setModifications] = useState<FileModification[] | null>(null);
   const [isOnboardingComplete, setIsOnboardingComplete] = useState(false);
   const { showToast, showButton, plan } = usePreviewStore();
   const updateExecution = useExecutionStore((s) => s.updateProgress);
   const enableUndo = useUndoStore((s) => s.enableUndo);
-  const isPreviewSurfacePage = currentPage === 'preview-workspace' || currentPage === 'preview-test';
+  const disableUndo = useUndoStore((s) => s.disableUndo);
+  const isFloatingPage = currentPage === 'floating-button';
 
   useEffect(() => {
     const hash = window.location.hash.replace('#/', '');
@@ -40,7 +43,9 @@ function App() {
   }, []);
 
   useEffect(() => {
-    const completed = localStorage.getItem('backtrack.onboarding.completed') === 'true';
+    const completed = import.meta.env.DEV
+      ? sessionStorage.getItem(DEV_ONBOARDING_SESSION_KEY) === 'true'
+      : localStorage.getItem('backtrack.onboarding.completed') === 'true';
     const activeFolder = localStorage.getItem('backtrack.active-folder');
     setIsOnboardingComplete(completed);
 
@@ -104,7 +109,7 @@ function App() {
   }, [plan, showToast]);
 
   useEffect(() => {
-    if (!isPreviewSurfacePage || !window.api?.onExecutionProgress) {
+    if (isFloatingPage || !window.api?.onExecutionProgress) {
       return;
     }
 
@@ -112,6 +117,7 @@ function App() {
       console.log('[ExecutionProgress]', progress);
       updateExecution(progress);
       if (progress?.status === 'success' && window.api?.getLatestExecution) {
+        sessionStorage.setItem(EXECUTION_SESSION_KEY, 'true');
         showButton();
         window.api.getLatestExecution().then((res: any) => {
           if (res?.success && res.execution) {
@@ -130,10 +136,10 @@ function App() {
         unsubscribe();
       }
     };
-  }, [isPreviewSurfacePage, updateExecution, enableUndo, showButton]);
+  }, [isFloatingPage, updateExecution, enableUndo, showButton]);
 
   useEffect(() => {
-    if (!isPreviewSurfacePage || !window.api?.onModificationWarning) {
+    if (isFloatingPage || !window.api?.onModificationWarning) {
       return;
     }
 
@@ -146,7 +152,26 @@ function App() {
         unsubscribe();
       }
     };
-  }, [isPreviewSurfacePage]);
+  }, [isFloatingPage]);
+
+  useEffect(() => {
+    if (isFloatingPage || !window.api?.onUndoProgress) {
+      return;
+    }
+
+    const unsubscribe = window.api.onUndoProgress((progress: any) => {
+      if (progress?.status === 'success') {
+        sessionStorage.removeItem(EXECUTION_SESSION_KEY);
+        disableUndo();
+      }
+    });
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, [isFloatingPage, disableUndo]);
 
   const renderModificationWarning = () => {
     if (!modifications) {
@@ -182,12 +207,23 @@ function App() {
     </>
   );
 
+  const renderUndoSurfaceUI = () => (
+    <>
+      <UndoButton />
+      <UndoProgress />
+      {renderModificationWarning()}
+    </>
+  );
+
   if (currentPage === 'control-panel') {
     if (!isOnboardingComplete) {
       return (
         <OnboardingPage
           onComplete={({ path }) => {
             setIsOnboardingComplete(true);
+            if (import.meta.env.DEV) {
+              sessionStorage.setItem(DEV_ONBOARDING_SESSION_KEY, 'true');
+            }
             if (window.api?.setActiveBasePath) {
               void window.api.setActiveBasePath(path);
             }
@@ -195,7 +231,12 @@ function App() {
         />
       );
     }
-    return <MainControlPage />;
+    return (
+      <>
+        <MainControlPage />
+        {renderUndoSurfaceUI()}
+      </>
+    );
   }
 
   if (currentPage === 'floating-button') {
@@ -208,9 +249,12 @@ function App() {
 
   if (currentPage === 'chat-drawer') {
     return (
-      <div className="w-screen h-screen bg-transparent">
-        <ChatDrawerPage />
-      </div>
+      <>
+        <div className="w-screen h-screen bg-transparent">
+          <ChatDrawerPage />
+        </div>
+        {renderUndoSurfaceUI()}
+      </>
     );
   }
 

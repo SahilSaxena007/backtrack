@@ -15,6 +15,15 @@
 - [x] Added staged planning progress UX and judge-friendly copy in chat drawer, including cancel affordance.
 - [x] Added success celebration flow (confetti + summary + quick actions) in execution overlay.
 - [x] Verified with `npm run build:main` and `npm run lint` after full integration.
+- [x] Fixed post-execution reopen flow: preview workspace now returns to compact mode (no forced before/after re-open).
+- [x] Expanded undo visibility beyond preview-only surfaces and hydrated undo from latest successful execution on app load.
+- [x] Added same-folder reorganization warning/confirmation guard in chat flow.
+- [x] Added startup interruption recovery (restore from backup for `in_progress` executions after restart).
+- [x] Added judge-friendly filesystem/path/permission error messaging.
+- [x] Scoped undo visibility to successful executions in the current app session (no stale undo on fresh startup).
+- [x] Dev-session onboarding reset added so sandbox/custom selection reappears on each fresh `npm run dev`.
+- [x] Conversation reset now happens once at new session start while preserving messages during ongoing session chat.
+- [x] Increased before/after card opacity for text readability while keeping overall backdrop transparent.
 **Backtrack Desktop App - Gemini 3 Hackathon**
 
 **Timeline:** Day 4 Morning (4 hours)  

@@ -2,10 +2,8 @@ import { useState } from 'react';
 import { FolderOpen } from 'lucide-react';
 import { BacktrackMark } from '../components/brand/BacktrackMark';
 
-type OnboardingMode = 'demo' | 'custom';
-
 interface OnboardingPageProps {
-  onComplete: (payload: { mode: OnboardingMode; path: string }) => void;
+  onComplete: (payload: { mode: 'custom'; path: string }) => void;
 }
 
 const ONBOARDING_STORAGE_KEY = 'backtrack.onboarding.completed';
@@ -13,7 +11,6 @@ const ACTIVE_FOLDER_KEY = 'backtrack.active-folder';
 const MODE_KEY = 'backtrack.folder-mode';
 
 export function OnboardingPage({ onComplete }: OnboardingPageProps) {
-  const [mode, setMode] = useState<OnboardingMode>('demo');
   const [customPath, setCustomPath] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -22,16 +19,15 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
     const result = await window.api.selectFolderDialog();
     if (result.success && result.path) {
       setCustomPath(result.path);
-      setMode('custom');
       setError('');
     }
   };
 
-  const saveChoice = (selectedMode: OnboardingMode, selectedPath: string) => {
+  const saveChoice = (selectedPath: string) => {
     localStorage.setItem(ONBOARDING_STORAGE_KEY, 'true');
     localStorage.setItem(ACTIVE_FOLDER_KEY, selectedPath);
-    localStorage.setItem(MODE_KEY, selectedMode);
-    onComplete({ mode: selectedMode, path: selectedPath });
+    localStorage.setItem(MODE_KEY, 'custom');
+    onComplete({ mode: 'custom', path: selectedPath });
   };
 
   const handleGetStarted = async () => {
@@ -39,21 +35,6 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
     setError('');
 
     try {
-      if (mode === 'demo') {
-        const demoResult = await window.api.setupDemoFolder();
-        if (!demoResult.success || !demoResult.path) {
-          throw new Error(demoResult.message || 'Could not prepare demo folder.');
-        }
-
-        const scopeResult = await window.api.setActiveBasePath(demoResult.path);
-        if (!scopeResult.success) {
-          throw new Error(scopeResult.message || 'Could not activate demo folder.');
-        }
-
-        saveChoice('demo', demoResult.path);
-        return;
-      }
-
       if (!customPath.trim()) {
         throw new Error('Choose a folder before continuing.');
       }
@@ -68,7 +49,7 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
         throw new Error(scopeResult.message || 'Could not activate selected folder.');
       }
 
-      saveChoice('custom', customPath);
+      saveChoice(customPath);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unable to start onboarding.';
       setError(message);
@@ -94,36 +75,11 @@ export function OnboardingPage({ onComplete }: OnboardingPageProps) {
               Choose a folder to organize
             </p>
 
-            <button
-              type="button"
-              onClick={() => setMode('demo')}
-              className={`w-full rounded-2xl border px-5 py-4 text-left transition ${
-                mode === 'demo'
-                  ? 'border-blue-300 bg-blue-50 shadow-sm'
-                  : 'border-slate-200 bg-white hover:border-blue-200'
-              }`}
-            >
-              <p className="font-semibold text-slate-900">Demo Mode (Safe sandbox)</p>
+            <div className="rounded-2xl border border-blue-300 bg-blue-50 px-5 py-4 shadow-sm">
+              <p className="font-semibold text-slate-900">Custom Folder</p>
               <p className="mt-1 text-sm text-slate-600">
-                Uses a sample folder in your user directory so judges can test safely.
+                Select the folder you want Backtrack to organize.
               </p>
-            </button>
-
-            <div
-              className={`rounded-2xl border px-5 py-4 transition ${
-                mode === 'custom'
-                  ? 'border-blue-300 bg-blue-50 shadow-sm'
-                  : 'border-slate-200 bg-white'
-              }`}
-            >
-              <button
-                type="button"
-                onClick={() => setMode('custom')}
-                className="w-full text-left"
-              >
-                <p className="font-semibold text-slate-900">Custom Folder</p>
-                <p className="mt-1 text-sm text-slate-600">Pick any folder you want Backtrack to organize.</p>
-              </button>
 
               <div className="mt-3 flex items-center gap-2">
                 <input

@@ -31,6 +31,17 @@ const DEFAULT_BASE_PATH = process.env.BASE_PATH || path.join(os.homedir(), 'back
 let activeBasePath = path.normalize(DEFAULT_BASE_PATH);
 let useMCP = process.env.USE_LOCAL_FS === '1' ? false : false;
 
+const friendlyFsError = (raw: string, targetPath: string) => {
+  const msg = raw.toLowerCase();
+  if (msg.includes('eacces') || msg.includes('access denied') || msg.includes('operation not permitted')) {
+    return `Backtrack cannot access this folder right now: ${targetPath}. Please choose a folder you can read and write.`;
+  }
+  if (msg.includes('enoent') || msg.includes('not found')) {
+    return `That folder no longer exists: ${targetPath}. Please pick a different folder.`;
+  }
+  return `Backtrack could not read this folder: ${targetPath}. Please try a different location.`;
+};
+
 const normalizeForCompare = (value: string) =>
   path.normalize(value).replace(/[\\/]+$/, '').toLowerCase();
 
@@ -89,7 +100,7 @@ async function scanFolderMCP(folderPath: string, recursive = false): Promise<Sca
     if (!isWithinActiveBasePath(normalizedPath)) {
       return {
         success: false,
-        error: `Access denied: Can only scan folders within ${activeBasePath}`
+        error: `For safety, Backtrack can only scan inside the selected folder scope: ${activeBasePath}`
       };
     }
 
@@ -109,7 +120,7 @@ async function scanFolderFS(folderPath: string, recursive = false): Promise<Scan
     if (!isWithinActiveBasePath(normalizedPath)) {
       return {
         success: false,
-        error: `Access denied: Can only scan folders within ${activeBasePath}`
+        error: `For safety, Backtrack can only scan inside the selected folder scope: ${activeBasePath}`
       };
     }
 
@@ -145,7 +156,7 @@ async function scanFolderFS(folderPath: string, recursive = false): Promise<Scan
     return { success: true, files };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    return { success: false, error: message };
+    return { success: false, error: friendlyFsError(message, folderPath) };
   }
 }
 
@@ -164,19 +175,24 @@ async function validateFolderPath(folderPath: string): Promise<ValidationResult>
     };
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    return { success: false, exists: false, isDirectory: false, error: message };
+    return {
+      success: false,
+      exists: false,
+      isDirectory: false,
+      error: friendlyFsError(message, folderPath)
+    };
   }
 }
 
 async function setActiveBasePath(folderPath: string) {
   const normalizedPath = path.normalize(folderPath);
   if (!fs.existsSync(normalizedPath)) {
-    return { success: false, message: 'Folder does not exist' };
+    return { success: false, message: 'That folder does not exist. Please choose another folder.' };
   }
 
   const stats = fs.statSync(normalizedPath);
   if (!stats.isDirectory()) {
-    return { success: false, message: 'Selected path is not a folder' };
+    return { success: false, message: 'That path is not a folder. Please choose a directory.' };
   }
 
   activeBasePath = normalizedPath;

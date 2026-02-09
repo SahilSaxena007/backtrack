@@ -83,6 +83,15 @@
 - Preview readability improved with high-contrast glass, folder file counts, size hints, and explicit "This will happen" transition annotations.
 - Execution success overlay now includes celebration confetti, summary metrics, and quick actions (`View Changes`, `Undo`).
 - Control panel keyboard shortcuts added: `Ctrl/Cmd+K` (chat), `Ctrl/Cmd+P` (preview), `Ctrl/Cmd+Z` (undo latest).
+- Preview workspace reopen now returns to compact preview button mode after execution (does not force before/after panel open again).
+- Undo availability now hydrates from latest successful execution and is visible from control panel/chat surfaces, not only preview pages.
+- Added startup recovery for interrupted executions: if app closes mid-run, latest in-progress executions are restored from backup on next launch and marked failed safely.
+- Added judge guardrail for repeated organization on the same folder (explicit confirmation before generating a new plan).
+- Filesystem path/permission failures now return user-friendly error copy for judges instead of raw technical messages.
+- Undo button visibility is now session-scoped: appears only after a successful execution in the current app run.
+- Dev behavior now re-shows onboarding/sandbox choice each `npm run dev` launch (session-based onboarding completion in dev).
+- Chat history is cleared once at the beginning of a new app session, while preserving messages during active in-session usage.
+- Preview before/after readability increased by reducing excessive transparency on inner cards while keeping background haze minimal.
 
 ## Agent Workflow Notes
 
