@@ -8,18 +8,6 @@ Backtrack AI is an Electron desktop agent for safe file organization with natura
 4. Execute only after explicit approval.
 5. Support deterministic undo.
 
-## Why this project is technically strong
-
-This repository demonstrates quality application development in the areas judges care about:
-
-- Type-safe architecture across Electron main/renderer/shared boundaries.
-- Typed IPC bridge via `preload.ts` (no direct Node access in renderer).
-- Staged Gemini reasoning pipeline (intent -> plan -> safety -> undo-plan).
-- Structured JSON outputs consumed by typed runtime objects.
-- Transactional execution stack: trace store, backup checkpoints, ledger, execution engine, undo engine.
-- Safety constraints before writes: scope boundaries, validation gates, and user approval.
-- Recoverability: undo and startup recovery behavior for interrupted runs.
-
 Quality checks:
 
 - `npm run lint` (`tsc --noEmit`)
